@@ -183,14 +183,14 @@
     </div>
 
     <nav>
-      <a href="#" class="nav-item active" id="attendanceNav"><span>▣</span><b>Attendance</b></a>
-      <a href="#" class="nav-item" id="hrPanelNav"><span>♙</span><b>HR Staff</b></a>
-      <a href="#" class="nav-item" id="payrollPanelNav"><span>₱</span><b>Payroll Staff</b></a>
-      <a href="#" class="nav-item" id="adminPanelNav"><span>◈</span><b>Admin Analytics</b></a>
+      <a href="#" class="nav-item active" id="attendanceNav"><span class="nav-icon"><img src="../images/logs.png" alt="" width="20" height="20"></span><b>Attendance</b></a>
+      <a href="#" class="nav-item" id="hrPanelNav"><span class="nav-icon"><img src="../images/handshake.png" alt="" width="20" height="20"></span><b>HR Staff</b></a>
+      <a href="#" class="nav-item" id="payrollPanelNav"><span class="nav-icon"><img src="../images/hand-coins.png" alt="" width="20" height="20"></span><b>Payroll Staff</b></a>
+      <a href="#" class="nav-item" id="adminPanelNav"><span class="nav-icon"><img src="../images/user-shield.png" alt="" width="20" height="20"></span><b>Admin Analytics</b></a>
     </nav>
 
     <div class="sidebar-bottom">
-      <a href="#" class="nav-item"><span>⚙</span><b>Settings</b></a>
+      <a href="#" class="nav-item"><span class="nav-icon"><img src="../images/sliders-horizontal.png" alt="" width="20" height="20"></span><b>Settings</b></a>
 
       <div class="admin">
         <div class="avatar mini"><img src="../images/461929387_2045606972540969_8604364621456449189_n.jpg" alt="Gerian Miona"></div>
@@ -311,21 +311,27 @@
       </div>
     </section>
 
-    <section class="hr-quick-actions" id="hrActions" hidden aria-label="HR staff actions">
-      <h2>HR Staff actions</h2>
-      <p>Choose a task to manage guard records and attendance.</p>
+    <section class="guard-directory" id="hrActions" hidden aria-label="Registered guards directory">
+      <div class="directory-head">
+        <div>
+          <h2>Registered guards <span id="guardDirectoryCount">0</span></h2>
+          <p>All guard records, including approved staff accounts.</p>
+        </div>
+        <div class="directory-search">⌕ <input id="guardDirectorySearch" placeholder="Search name, ID or post"></div>
+      </div>
 
-      <div class="hr-action-grid">
-        <button type="button" data-hr-action="profiles">View guard profiles</button>
-        <button type="button" data-hr-action="add">Add new guards / employees</button>
-        <button type="button" data-hr-action="edit">Edit employee information</button>
-        <button type="button" data-hr-action="status">Activate / deactivate employees</button>
-        <button type="button" data-hr-action="id">Assign employee ID</button>
-        <button type="button" data-hr-action="schedule">Manage schedules / shifts</button>
-        <button type="button" data-hr-action="attendance">View attendance</button>
-        <button type="button" data-hr-action="exceptions">Review late / absent records</button>
-        <button type="button" data-hr-action="report">Generate attendance reports</button>
-        <button type="button" data-hr-action="correct">Correct attendance records</button>
+      <div class="directory-table-wrap">
+        <table class="directory-table">
+          <thead>
+            <tr>
+              <th>GUARD</th>
+              <th>POST / DEPARTMENT</th>
+              <th>CONTACT</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody id="guardDirectoryRows"></tbody>
+        </table>
       </div>
     </section>
 
@@ -866,5 +872,5 @@
   <div class="toast" id="toast">QR scanner is ready to launch</div>
 
   <script src="script.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a38f67cf1c9fc8c3',t:'MTc4OTA1MzUwOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3977b11f9788b3f',t:'MTc4OTEzODE4Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

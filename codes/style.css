@@ -160,6 +160,29 @@ h1 {
     text-align:center;
 }
 
+/* Sidebar icons: plain images, reliable on file:// and localhost alike.
+   The active item tints its icon Sentry blue. */
+.nav-item .nav-icon {
+    width:20px;
+    flex:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.nav-item .nav-icon img {
+    width:20px;
+    height:20px;
+    display:block;
+    object-fit:contain;
+    opacity:.7;
+}
+
+.nav-item.active .nav-icon img {
+    opacity:1;
+    filter:invert(31%) sepia(88%) saturate(2878%) hue-rotate(214deg) brightness(97%) contrast(96%);
+}
+
 .nav-item b {
     font-weight:600;
 }
@@ -1208,14 +1231,14 @@ body.admin-panel-active .content-grid {
 }
 
 body.hr-panel-active .hr-panel,
-body.hr-panel-active .hr-quick-actions,
+body.hr-panel-active .guard-directory,
 body.payroll-panel-active .payroll-panel,
 body.admin-panel-active .admin-panel {
     display:block;
 }
 
-/* HR quick action buttons */
-.hr-quick-actions {
+/* Registered guard directory (HR view) */
+.guard-directory {
     margin:0 48px 35px;
     padding:24px;
     border:1px solid #e8ecf3;
@@ -1223,37 +1246,81 @@ body.admin-panel-active .admin-panel {
     background:#fff;
 }
 
-.hr-quick-actions h2 {
+.directory-head {
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:18px;
+}
+
+.directory-head h2 {
     font:800 18px Manrope;
 }
 
-.hr-quick-actions>p {
-    margin:5px 0 18px;
+.directory-head h2 span {
+    display:inline-grid;
+    min-width:21px;
+    height:21px;
+    place-items:center;
+    border-radius:50%;
+    color:#315ce9;
+    background:#eef2ff;
+    font:800 11px 'DM Sans';
+    vertical-align:2px;
+}
+
+.directory-head p {
+    margin:5px 0 0;
     color:#7d879b;
     font-size:12px;
 }
 
-.hr-action-grid {
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:10px;
-}
-
-.hr-action-grid button {
-    padding:12px;
+.directory-search {
+    display:flex;
+    align-items:center;
+    gap:7px;
+    min-width:260px;
+    padding:9px 12px;
     border:1px solid #dce3ef;
     border-radius:8px;
-    background:#fff;
-    color:#202c49;
-    text-align:left;
-    font:600 12px 'DM Sans';
-    cursor:pointer;
-    transition:.2s;
+    color:#7d879b;
+    font-size:13px;
 }
 
-.hr-action-grid button:hover {
-    border-color:#315ce9;
-    background:#eef2ff;
+.directory-search input {
+    width:100%;
+    border:0;
+    outline:0;
+    font:12px 'DM Sans';
+    color:#202c49;
+}
+
+.directory-table-wrap {
+    overflow-x:auto;
+}
+
+.directory-table {
+    width:100%;
+    min-width:640px;
+}
+
+.directory-table th {
+    padding:0 10px 10px;
+}
+
+.directory-table td {
+    padding:12px 10px;
+}
+
+.avatar.initials {
+    display:grid;
+    place-items:center;
+    font:800 12px Manrope;
+}
+
+.status.active {
+    background:#eaf0ff;
     color:#315ce9;
 }
 
@@ -2384,12 +2451,18 @@ body.admin-panel-active .admin-panel {
         gap:10px;
     }
 
-    .hr-quick-actions {
+    .guard-directory {
         margin:0 20px 28px;
+        padding:18px;
     }
 
-    .hr-action-grid {
-        grid-template-columns:1fr;
+    .directory-head {
+        flex-direction:column;
+        align-items:stretch;
+    }
+
+    .directory-search {
+        min-width:0;
     }
 
     .activity-row {

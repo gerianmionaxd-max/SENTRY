@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<!--
+  SENTRY GUARD APP (mobile view)
+  index.html : page structure and screens
+  style.css  : mobile UI, phone frame and responsive layout
+  app.js     : linked login, tabs, attendance, dynamic QR behaviour
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>SENTRY Guard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <p class="stage-caption">SENTRY Guard App &mdash; demo mobile view</p>
+
+  <!-- Phone frame (fills the whole screen on real phones) -->
+  <div class="phone">
+    <div class="screen">
+
+      <div class="island" aria-hidden="true"></div>
+
+      <!-- Status bar -->
+      <div class="statusbar">
+        <b id="statusTime">9:41</b>
+        <span class="status-icons" aria-hidden="true">
+          <svg viewBox="0 0 20 14" width="19" height="13"><path d="M1 13v-3M6 13V8M11 13V4M16 13V1" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 22 14" width="20" height="13"><path d="M2 5.5C6.5 1.5 15.5 1.5 20 5.5M5.5 9c3-2.6 8-2.6 11 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="11" cy="12" r="1.6" fill="currentColor"/></svg>
+          <svg viewBox="0 0 27 14" width="25" height="13"><rect x="1" y="1.5" width="21" height="11" rx="3.5" stroke="currentColor" fill="none" opacity=".5"/><rect x="3" y="3.5" width="15" height="7" rx="2" fill="currentColor"/><path d="M24.5 5v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".5"/></svg>
+        </span>
+      </div>
+
+      <div class="views">
+
+        <!-- ================= LOGIN ================= -->
+        <section class="view active" id="view-login">
+          <div class="login-hero">
+            <img class="login-logo" src="../images/1568-logo-1781901055.317-00a3e4-color.webp" alt="Sentry logo">
+            <p class="login-kicker">SECURITY OPERATIONS</p>
+            <h1>SENTRY Guard</h1>
+            <p>Time in with your dynamic QR code.</p>
+          </div>
+
+          <form class="login-card" id="loginForm" novalidate>
+            <label>Email address
+              <input id="guardEmail" type="email" autocomplete="email" placeholder="you@example.com">
+            </label>
+            <label>Password
+              <input id="guardPin" type="password" autocomplete="current-password" placeholder="Enter your password">
+            </label>
+            <p class="login-error" id="loginError" role="alert" hidden></p>
+            <button class="primary-btn" type="submit">Log in</button>
+            <p class="login-help">
+              Log in with the <b>email &amp; password</b> you registered on the
+              office dashboard. New accounts need <b>admin approval</b> first.
+            </p>
+          </form>
+
+          <p class="login-foot">Z-James Security Agency<br>Guard attendance terminal<br>
+            <small>Tip: open the dashboard &amp; this app from the same Live Server so accounts stay in sync.</small></p>
+        </section>
+
+        <!-- ================= HOME ================= -->
+        <section class="view" id="view-home">
+          <header class="home-head">
+            <div class="home-avatar initials" id="homeAvatar">··</div>
+            <div>
+              <p id="greeting">Good morning</p>
+              <h2 id="homeName">Guard</h2>
+            </div>
+            <span class="home-date" id="todayLabel">—</span>
+          </header>
+
+          <article class="status-card">
+            <div class="status-top">
+              <div>
+                <p>TODAY&rsquo;S STATUS</p>
+                <h3 id="todayStatus">Not timed in</h3>
+              </div>
+              <span class="status-pill" id="todayPill">● Off duty</span>
+            </div>
+            <div class="status-times">
+              <div><span>TIME IN</span><b id="timeInLabel">--:--</b></div>
+              <div><span>TIME OUT</span><b id="timeOutLabel">--:--</b></div>
+              <div><span>SHIFT</span><b>7A &ndash; 3P</b></div>
+            </div>
+            <div class="shift-bar"><i id="shiftFill"></i></div>
+            <p class="shift-note" id="shiftNote">Show your QR code to personnel to time in.</p>
+          </article>
+
+          <div class="quick-grid">
+            <button type="button" data-goto="qr">
+              <span class="quick-icon">▦</span>
+              <b>My QR code</b><small>Dynamic &middot; 30s</small>
+            </button>
+            <button type="button" data-goto="records">
+              <span class="quick-icon">◷</span>
+              <b>Records</b><small>Time in / out</small>
+            </button>
+          </div>
+
+          <article class="card">
+            <div class="card-head">
+              <h3>Recent attendance</h3>
+              <button class="link-btn" type="button" data-goto="records">View all →</button>
+            </div>
+            <div id="recentList"></div>
+          </article>
+        </section>
+
+        <!-- ================= QR ================= -->
+        <section class="view" id="view-qr">
+          <header class="page-head">
+            <p>DYNAMIC VERIFICATION</p>
+            <h2>My QR code</h2>
+          </header>
+
+          <article class="qr-card">
+            <div class="qr-frame">
+              <div class="qr-box" id="qrBox" aria-label="Guard QR code"></div>
+              <div class="qr-scanline" id="qrScanline" aria-hidden="true"></div>
+              <!-- Animated success overlay, shown when personnel scan the code -->
+              <div class="qr-success" id="qrSuccess" hidden>
+                <span class="qr-check">
+                  <svg viewBox="0 0 32 32"><path d="M9 17l6 6 11-12"/></svg>
+                </span>
+                <b>Scanned</b>
+                <small id="qrSuccessNote">Time-in recorded</small>
+              </div>
+            </div>
+            <div class="qr-meta">
+              <div class="qr-count" aria-label="Code refresh countdown">
+                <svg viewBox="0 0 64 64" width="58" height="58">
+                  <circle cx="32" cy="32" r="26" fill="none" stroke="#e3e9f5" stroke-width="6"/>
+                  <circle id="qrRing" cx="32" cy="32" r="26" fill="none" stroke="#315ce9"
+                          stroke-width="6" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+                </svg>
+                <b id="qrSeconds">30</b>
+              </div>
+              <div>
+                <p>SECURITY TOKEN</p>
+                <h3 id="qrToken">······</h3>
+                <small id="qrExpiry">Refreshes in 30s</small>
+              </div>
+            </div>
+            <p class="qr-id" id="qrGuardLine">·</p>
+          </article>
+
+          <button class="primary-btn ghost-btn" id="simulateScan" type="button">
+            Simulate personnel scan <small>(demo)</small>
+          </button>
+          <button class="primary-btn" id="newCodeBtn" type="button" hidden>Generate new code</button>
+          <p class="qr-note">Personnel scan this code to record your time-in / time-out.
+            Unscanned codes automatically reset every <b>30 seconds</b>.</p>
+        </section>
+
+        <!-- ================= RECORDS ================= -->
+        <section class="view" id="view-records">
+          <header class="page-head">
+            <p>TIME IN / TIME OUT</p>
+            <h2>Attendance records</h2>
+          </header>
+
+          <div class="summary-row">
+            <div><b id="sumPresent">0</b><span>Present</span></div>
+            <div><b id="sumLate">0</b><span>Late</span></div>
+            <div><b id="sumAbsent">0</b><span>Absent</span></div>
+          </div>
+
+          <div id="recordList"></div>
+        </section>
+
+        <!-- ================= PROFILE ================= -->
+        <section class="view" id="view-profile">
+          <article class="profile-hero">
+            <div class="profile-photo initials" id="profileAvatar">··</div>
+            <h2 id="profileName">Guard</h2>
+            <p id="profileSub">·</p>
+            <span class="status-pill" id="profilePill">● Off duty</span>
+          </article>
+
+          <div class="score-row">
+            <div><b id="weekPresent">0</b><span>Days present</span></div>
+            <div><b id="weekLate">0</b><span>Late arrivals</span></div>
+            <div><b id="weekRate">—</b><span>On-time rate</span></div>
+          </div>
+
+          <article class="card">
+            <div class="detail"><span>Guard ID</span><b id="dId">—</b></div>
+            <div class="detail"><span>Department</span><b id="dDept">—</b></div>
+            <div class="detail"><span>Contact number</span><b id="dPhone">—</b></div>
+            <div class="detail"><span>Email address</span><b id="dEmail">—</b></div>
+            <div class="detail"><span>Home address</span><b id="dAddr">—</b></div>
+          </article>
+
+          <button class="primary-btn danger-btn" id="logoutBtn" type="button">Log out</button>
+        </section>
+
+      </div><!-- /views -->
+
+      <!-- Bottom tab bar -->
+      <nav class="tabbar" id="tabbar" hidden>
+        <button type="button" data-view="home" class="active">
+          <svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/></svg>
+          <span>Home</span>
+        </button>
+        <button type="button" data-view="qr">
+          <svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h3v3h-3zM18 13h2v2h-2zM13 18h3v3h-3zM18 18h2v2h-2z"/></svg>
+          <span>My QR</span>
+        </button>
+        <button type="button" data-view="records">
+          <svg viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 0 8 8h-2a6 6 0 1 1-6-6zm1 2v5l4 2-.9 1.6L11 12z"/></svg>
+          <span>Records</span>
+        </button>
+        <button type="button" data-view="profile">
+          <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm-7 8a7 7 0 0 1 14 0z"/></svg>
+          <span>Profile</span>
+        </button>
+        <i class="home-bar" aria-hidden="true"></i>
+      </nav>
+
+      <div class="toast" id="toast" role="status"></div>
+
+    </div><!-- /screen -->
+  </div><!-- /phone -->
+
+  <p class="stage-caption small">Guards log in with their approved web account &middot; QR resets every 30 seconds</p>
+
+  <script src="qrcode.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,1096 @@
+/*
+==========================================================
+  SENTRY GUARD APP — MOBILE STYLESHEET
+  Phone frame, screens, QR card, tabs and responsive layout.
+  Behaviour lives in app.js.
+==========================================================
+
+  1. Variables & reset
+  2. Stage & phone frame
+  3. Status bar & views
+  4. Login screen
+  5. Home screen
+  6. QR screen (+ scan success overlay)
+  7. Records screen
+  8. Profile screen
+  9. Tab bar & toast
+ 10. Responsive (real phones)
+==========================================================
+*/
+
+
+/* ==========================================================
+   1. VARIABLES & RESET
+========================================================== */
+
+:root {
+    --ink:#202c49;
+    --muted:#7d879b;
+    --line:#e8ecf3;
+    --blue:#315ce9;
+    --blue-dark:#1c3aa5;
+    --pale:#f5f7fc;
+    --card:#fff;
+    --green:#269461;
+    --amber:#d2921f;
+    --rose:#df6471;
+}
+
+* {
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+}
+
+
+/* ==========================================================
+   2. STAGE & PHONE FRAME
+========================================================== */
+
+body {
+    margin:0;
+    min-height:100vh;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    padding:22px 12px;
+    color:var(--ink);
+    font:14px 'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+    background:
+        radial-gradient(700px 380px at 15% 10%, #3f6bf066, transparent 60%),
+        radial-gradient(700px 420px at 85% 90%, #1c3aa588, transparent 60%),
+        linear-gradient(150deg,#101a3a,#0a1230 70%);
+}
+
+.stage-caption {
+    margin:0;
+    color:#aebbdd;
+    font:700 12px Manrope,system-ui,sans-serif;
+    letter-spacing:1.4px;
+    text-transform:uppercase;
+}
+
+.stage-caption.small {
+    font-size:10px;
+    letter-spacing:.8px;
+    text-transform:none;
+    color:#7e93c4;
+}
+
+/* Device bezel */
+.phone {
+    width:402px;
+    height:min(872px,94vh);
+    min-height:620px;
+    padding:12px;
+    border-radius:56px;
+    background:linear-gradient(160deg,#2a3350,#0d1327);
+    box-shadow:
+        0 40px 90px #000a,
+        0 0 0 2px #3c4767,
+        inset 0 0 0 2px #000;
+}
+
+.screen {
+    position:relative;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    border-radius:44px;
+    background:var(--pale);
+}
+
+.island {
+    position:absolute;
+    top:12px;
+    left:50%;
+    z-index:5;
+    width:112px;
+    height:27px;
+    border-radius:999px;
+    background:#0a0f22;
+    transform:translateX(-50%);
+}
+
+
+/* ==========================================================
+   3. STATUS BAR & VIEWS
+========================================================== */
+
+.statusbar {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 28px 6px;
+    font:700 13px Manrope,system-ui,sans-serif;
+}
+
+.status-icons {
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+
+.views {
+    flex:1;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    scrollbar-width:none;
+    position:relative;
+}
+
+.views::-webkit-scrollbar {
+    display:none;
+}
+
+.view {
+    display:none;
+    padding:10px 20px 118px;
+    animation:rise .28s ease;
+}
+
+.view.active {
+    display:block;
+}
+
+@keyframes rise {
+    from { opacity:0; transform:translateY(10px); }
+}
+
+.page-head p,
+.card-head p {
+    margin:0;
+    color:#9099ab;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:1.2px;
+}
+
+.page-head h2 {
+    margin:5px 0 16px;
+    font:800 26px Manrope,system-ui,sans-serif;
+    letter-spacing:-.8px;
+}
+
+.card {
+    margin-top:16px;
+    padding:18px;
+    border-radius:20px;
+    background:var(--card);
+    box-shadow:0 8px 24px #23386712;
+}
+
+.card-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:6px;
+}
+
+.card-head h3 {
+    margin:0;
+    font:800 15px Manrope,system-ui,sans-serif;
+}
+
+.link-btn {
+    border:0;
+    background:none;
+    color:var(--blue);
+    font:700 12px 'DM Sans',system-ui,sans-serif;
+    cursor:pointer;
+}
+
+.primary-btn {
+    width:100%;
+    border:0;
+    border-radius:14px;
+    padding:14px;
+    background:var(--blue);
+    color:#fff;
+    font:700 14px 'DM Sans',system-ui,sans-serif;
+    cursor:pointer;
+    box-shadow:0 10px 22px #315ce940;
+    transition:transform .12s;
+}
+
+.primary-btn:active {
+    transform:scale(.98);
+}
+
+.status-pill {
+    font-size:11px;
+    font-weight:700;
+    padding:7px 11px;
+    border-radius:999px;
+    white-space:nowrap;
+    background:#eef1f6;
+    color:#66738b;
+}
+
+.status-pill.on {
+    background:#e6f7ee;
+    color:var(--green);
+}
+
+.status-pill.late {
+    background:#fff4dc;
+    color:var(--amber);
+}
+
+.status-pill.done {
+    background:#eaf0ff;
+    color:var(--blue);
+}
+
+
+/* ==========================================================
+   4. LOGIN SCREEN
+========================================================== */
+
+#view-login {
+    padding-top:26px;
+}
+
+.login-hero {
+    text-align:center;
+    padding:6px 0 20px;
+}
+
+.login-logo {
+    width:76px;
+    height:76px;
+    object-fit:contain;
+    border-radius:22px;
+    background:#fff;
+    padding:8px;
+    box-shadow:0 10px 26px #2338671f;
+}
+
+.login-kicker {
+    margin:14px 0 4px;
+    color:var(--blue);
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:1.6px;
+}
+
+.login-hero h1 {
+    margin:0;
+    font:800 30px Manrope,system-ui,sans-serif;
+    letter-spacing:-1px;
+}
+
+.login-hero p:last-child {
+    margin:6px 0 0;
+    color:var(--muted);
+    font-size:13px;
+}
+
+.login-card {
+    padding:22px;
+    border-radius:22px;
+    background:#fff;
+    box-shadow:0 14px 34px #23386717;
+}
+
+.login-card label {
+    display:block;
+    margin:0 0 14px;
+    color:#536077;
+    font-size:12px;
+    font-weight:700;
+}
+
+.login-card input {
+    display:block;
+    width:100%;
+    margin-top:6px;
+    padding:13px 12px;
+    border:1.5px solid #dce3ef;
+    border-radius:12px;
+    font:600 15px 'DM Sans',system-ui,sans-serif;
+    color:var(--ink);
+    outline:none;
+    transition:border-color .15s;
+}
+
+.login-card input:focus {
+    border-color:var(--blue);
+}
+
+.login-error {
+    margin:0 0 12px;
+    padding:10px 12px;
+    border-radius:10px;
+    background:#ffeff1;
+    color:var(--rose);
+    font-size:12px;
+    font-weight:600;
+}
+
+.login-error[hidden] {
+    display:none;
+}
+
+.shake {
+    animation:shake .35s;
+}
+
+@keyframes shake {
+    20%,60% { transform:translateX(-6px); }
+    40%,80% { transform:translateX(6px); }
+}
+
+.login-help {
+    margin:14px 0 0;
+    border:1px dashed #b9c6ea;
+    border-radius:12px;
+    background:#f2f5ff;
+    padding:10px 12px;
+    color:#53699e;
+    font-size:11px;
+    line-height:1.65;
+    text-align:center;
+}
+
+.login-foot {
+    margin:22px 0 0;
+    text-align:center;
+    color:#9aa4b8;
+    font-size:11px;
+    line-height:1.7;
+}
+
+.login-foot small {
+    font-size:10px;
+    color:#a5aec2;
+}
+
+
+/* ==========================================================
+   5. HOME SCREEN
+========================================================== */
+
+.home-head {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:8px 0 16px;
+}
+
+/* Initials avatar, tinted per guard account */
+.home-avatar {
+    width:48px;
+    height:48px;
+    flex:none;
+    display:grid;
+    place-items:center;
+    border-radius:50%;
+    border:2.5px solid #fff;
+    box-shadow:0 6px 16px #23386726;
+    background:#eaf0ff;
+    color:var(--blue);
+    font:800 16px Manrope,system-ui,sans-serif;
+}
+
+.home-head p {
+    margin:0;
+    color:var(--muted);
+    font-size:11px;
+    font-weight:600;
+}
+
+.home-head h2 {
+    margin:1px 0 0;
+    font:800 19px Manrope,system-ui,sans-serif;
+    letter-spacing:-.4px;
+}
+
+.home-date {
+    margin-left:auto;
+    padding:7px 10px;
+    border-radius:10px;
+    background:#eaf0ff;
+    color:var(--blue);
+    font-size:11px;
+    font-weight:700;
+    white-space:nowrap;
+}
+
+.status-card {
+    padding:18px;
+    border-radius:22px;
+    color:#fff;
+    background:linear-gradient(145deg,#3d66f0,#1c3aa5);
+    box-shadow:0 16px 32px #315ce94d;
+}
+
+.status-top {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+}
+
+.status-top p {
+    margin:0;
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:1.4px;
+    opacity:.75;
+}
+
+.status-top h3 {
+    margin:5px 0 0;
+    font:800 22px Manrope,system-ui,sans-serif;
+    letter-spacing:-.5px;
+}
+
+.status-card .status-pill {
+    background:#ffffff2e;
+    color:#fff;
+}
+
+.status-times {
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:8px;
+    margin-top:16px;
+    padding:12px;
+    border-radius:14px;
+    background:#ffffff1c;
+}
+
+.status-times span {
+    display:block;
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:1px;
+    opacity:.75;
+}
+
+.status-times b {
+    display:block;
+    margin-top:3px;
+    font:800 15px Manrope,system-ui,sans-serif;
+}
+
+.shift-bar {
+    height:7px;
+    margin-top:14px;
+    border-radius:99px;
+    background:#ffffff30;
+    overflow:hidden;
+}
+
+.shift-bar i {
+    display:block;
+    height:100%;
+    width:0;
+    border-radius:99px;
+    background:#7df0c0;
+    transition:width .5s;
+}
+
+.shift-note {
+    margin:10px 0 0;
+    font-size:11px;
+    color:#d6e0ff;
+}
+
+.quick-grid {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-top:16px;
+}
+
+.quick-grid button {
+    border:0;
+    border-radius:18px;
+    padding:16px 12px;
+    background:#fff;
+    text-align:center;
+    cursor:pointer;
+    box-shadow:0 8px 22px #23386710;
+}
+
+.quick-grid button:active {
+    transform:scale(.97);
+}
+
+.quick-icon {
+    display:grid;
+    place-items:center;
+    width:42px;
+    height:42px;
+    margin:0 auto 8px;
+    border-radius:14px;
+    background:#eaf0ff;
+    color:var(--blue);
+    font-size:21px;
+}
+
+.quick-grid b {
+    display:block;
+    font-size:13px;
+}
+
+.quick-grid small {
+    color:var(--muted);
+    font-size:10px;
+}
+
+.att-row {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:11px 0;
+    border-top:1px solid #f0f2f6;
+    font-size:12px;
+}
+
+.att-row:first-child {
+    border-top:0;
+}
+
+.att-date {
+    width:44px;
+    flex:none;
+    text-align:center;
+}
+
+.att-date b {
+    display:block;
+    font:800 17px Manrope,system-ui,sans-serif;
+}
+
+.att-date span {
+    color:var(--muted);
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:.6px;
+}
+
+.att-row small {
+    display:block;
+    color:var(--muted);
+    font-size:10px;
+    margin-top:2px;
+}
+
+.mini-pill {
+    margin-left:auto;
+    font-size:10px;
+    font-weight:700;
+    padding:5px 9px;
+    border-radius:999px;
+}
+
+.mini-pill.present { background:#e6f7ee; color:var(--green); }
+.mini-pill.late { background:#fff4dc; color:var(--amber); }
+.mini-pill.absent { background:#ffeff1; color:var(--rose); }
+.mini-pill.today { background:#eaf0ff; color:var(--blue); }
+
+
+/* ==========================================================
+   6. QR SCREEN (+ SCAN SUCCESS OVERLAY)
+========================================================== */
+
+.qr-card {
+    padding:22px 20px;
+    border-radius:24px;
+    background:#fff;
+    text-align:center;
+    box-shadow:0 16px 36px #2338671a;
+}
+
+.qr-frame {
+    position:relative;
+    width:228px;
+    margin:0 auto;
+    padding:12px;
+    border-radius:20px;
+    border:2px solid var(--line);
+    overflow:hidden;
+}
+
+.qr-box svg {
+    display:block;
+    width:200px;
+    height:200px;
+    animation:qrIn .3s ease;
+}
+
+@keyframes qrIn {
+    from { opacity:0; transform:scale(.96); }
+}
+
+.qr-scanline {
+    position:absolute;
+    left:16px;
+    right:16px;
+    height:2px;
+    border-radius:2px;
+    background:#315ce9;
+    box-shadow:0 0 12px #315ce9;
+    animation:sweep 2.6s ease-in-out infinite alternate;
+}
+
+@keyframes sweep {
+    from { top:14px; }
+    to { top:calc(100% - 16px); }
+}
+
+/* Success overlay: pops over the spent code once scanned */
+.qr-success {
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    border-radius:18px;
+    background:#fffffff2;
+    backdrop-filter:blur(3px);
+    animation:successIn .35s ease;
+}
+
+.qr-success[hidden] {
+    display:none;
+}
+
+@keyframes successIn {
+    from { opacity:0; }
+}
+
+.qr-check {
+    display:grid;
+    place-items:center;
+    width:88px;
+    height:88px;
+    border-radius:50%;
+    background:#2dc576;
+    box-shadow:0 14px 30px #2dc57666;
+    animation:checkPop .55s cubic-bezier(.2,1.6,.4,1);
+}
+
+@keyframes checkPop {
+    0% { transform:scale(0); }
+    60% { transform:scale(1.12); }
+    80% { transform:scale(.94); }
+    100% { transform:scale(1); }
+}
+
+.qr-check svg {
+    width:46px;
+    height:46px;
+    fill:none;
+    stroke:#fff;
+    stroke-width:4;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+}
+
+.qr-check path {
+    stroke-dasharray:32;
+    stroke-dashoffset:32;
+    animation:checkDraw .4s .25s ease forwards;
+}
+
+@keyframes checkDraw {
+    to { stroke-dashoffset:0; }
+}
+
+.qr-success b {
+    font:800 19px Manrope,system-ui,sans-serif;
+    animation:successText .4s .15s ease backwards;
+}
+
+.qr-success small {
+    color:var(--muted);
+    font-size:11px;
+    font-weight:600;
+    animation:successText .4s .25s ease backwards;
+}
+
+@keyframes successText {
+    from { opacity:0; transform:translateY(8px); }
+}
+
+.qr-meta {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    margin-top:18px;
+    text-align:left;
+}
+
+.qr-count {
+    position:relative;
+    flex:none;
+}
+
+.qr-count svg circle:last-child {
+    stroke-dasharray:163.4;
+    stroke-dashoffset:0;
+}
+
+.qr-count b {
+    position:absolute;
+    inset:0;
+    display:grid;
+    place-items:center;
+    font:800 17px Manrope,system-ui,sans-serif;
+}
+
+.qr-count.urgent svg circle:last-child {
+    stroke:var(--rose);
+}
+
+.qr-count.urgent b {
+    color:var(--rose);
+}
+
+.qr-meta p {
+    margin:0;
+    color:#9099ab;
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:1.2px;
+}
+
+.qr-meta h3 {
+    margin:2px 0;
+    font:800 24px Manrope,system-ui,sans-serif;
+    letter-spacing:3px;
+}
+
+.qr-meta small {
+    color:var(--muted);
+    font-size:11px;
+    font-weight:600;
+}
+
+.qr-id {
+    margin:14px 0 0;
+    padding-top:12px;
+    border-top:1px solid #f0f2f6;
+    color:var(--muted);
+    font-size:11px;
+    font-weight:600;
+}
+
+.ghost-btn {
+    margin-top:16px;
+    background:#fff;
+    color:var(--blue);
+    box-shadow:inset 0 0 0 1.5px var(--blue);
+}
+
+.ghost-btn small {
+    font-weight:500;
+    opacity:.7;
+}
+
+#newCodeBtn {
+    margin-top:16px;
+}
+
+.qr-note {
+    margin:14px 4px 0;
+    text-align:center;
+    color:var(--muted);
+    font-size:11px;
+    line-height:1.7;
+}
+
+
+/* ==========================================================
+   7. RECORDS SCREEN
+========================================================== */
+
+.summary-row {
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:10px;
+    margin-bottom:6px;
+}
+
+.summary-row div {
+    padding:14px 8px;
+    border-radius:16px;
+    background:#fff;
+    text-align:center;
+    box-shadow:0 8px 20px #2338670e;
+}
+
+.summary-row b {
+    display:block;
+    font:800 22px Manrope,system-ui,sans-serif;
+}
+
+.summary-row div:nth-child(1) b { color:var(--green); }
+.summary-row div:nth-child(2) b { color:var(--amber); }
+.summary-row div:nth-child(3) b { color:var(--rose); }
+
+.summary-row span {
+    color:var(--muted);
+    font-size:10px;
+    font-weight:700;
+}
+
+.record-card {
+    margin-top:10px;
+    padding:15px 16px;
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 8px 20px #2338670e;
+}
+
+.record-card.today {
+    box-shadow:inset 0 0 0 1.5px var(--blue);
+}
+
+.record-top {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+
+.record-top b {
+    font:800 13px Manrope,system-ui,sans-serif;
+}
+
+.record-times {
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:8px;
+    margin-top:10px;
+}
+
+.record-times span {
+    display:block;
+    color:#9aa4b8;
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:.8px;
+}
+
+.record-times b {
+    display:block;
+    margin-top:2px;
+    font-size:13px;
+}
+
+
+/* ==========================================================
+   8. PROFILE SCREEN
+========================================================== */
+
+.profile-hero {
+    text-align:center;
+    padding:14px 0 6px;
+}
+
+.profile-photo {
+    width:92px;
+    height:92px;
+    margin:0 auto;
+    display:grid;
+    place-items:center;
+    border-radius:50%;
+    border:4px solid #fff;
+    box-shadow:0 12px 28px #2338672e;
+    background:#eaf0ff;
+    color:var(--blue);
+    font:800 30px Manrope,system-ui,sans-serif;
+}
+
+.profile-hero h2 {
+    margin:10px 0 2px;
+    font:800 21px Manrope,system-ui,sans-serif;
+    letter-spacing:-.5px;
+}
+
+.profile-hero p {
+    margin:0 0 10px;
+    color:var(--muted);
+    font-size:12px;
+}
+
+.score-row {
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:10px;
+    margin-top:14px;
+}
+
+.score-row div {
+    padding:13px 6px;
+    border-radius:16px;
+    background:#fff;
+    text-align:center;
+    box-shadow:0 8px 20px #2338670e;
+}
+
+.score-row b {
+    display:block;
+    color:var(--blue);
+    font:800 19px Manrope,system-ui,sans-serif;
+}
+
+.score-row span {
+    color:var(--muted);
+    font-size:10px;
+    font-weight:700;
+}
+
+.detail {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:11px 0;
+    border-top:1px solid #f0f2f6;
+    font-size:12px;
+}
+
+.detail:first-child {
+    border-top:0;
+}
+
+.detail span {
+    color:var(--muted);
+    flex:none;
+}
+
+.detail b {
+    text-align:right;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+
+/* ==========================================================
+   9. TAB BAR & TOAST
+========================================================== */
+
+.tabbar {
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:0;
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    padding:10px 8px 0;
+    background:#fffffff2;
+    backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);
+}
+
+.tabbar[hidden] {
+    display:none;
+}
+
+.tabbar button {
+    border:0;
+    background:none;
+    padding:4px 0 2px;
+    color:#9aa4b8;
+    cursor:pointer;
+}
+
+.tabbar button svg {
+    width:23px;
+    height:23px;
+    fill:currentColor;
+}
+
+.tabbar button span {
+    display:block;
+    margin-top:1px;
+    font-size:9px;
+    font-weight:700;
+}
+
+.tabbar button.active {
+    color:var(--blue);
+}
+
+.home-bar {
+    grid-column:1 / -1;
+    width:120px;
+    height:4px;
+    margin:8px auto 8px;
+    border-radius:99px;
+    background:#0a0f22;
+    opacity:.85;
+}
+
+.toast {
+    position:absolute;
+    left:20px;
+    right:20px;
+    bottom:104px;
+    z-index:6;
+    padding:13px 16px;
+    border-radius:14px;
+    background:#202c49;
+    color:#fff;
+    font-size:12px;
+    font-weight:600;
+    text-align:center;
+    box-shadow:0 12px 30px #202c4955;
+    transform:translateY(20px);
+    opacity:0;
+    pointer-events:none;
+    transition:.25s;
+}
+
+.toast.show {
+    transform:none;
+    opacity:1;
+}
+
+
+/* ==========================================================
+   10. RESPONSIVE (real phones)
+========================================================== */
+
+@media (max-width:480px) {
+    body {
+        padding:0;
+        gap:0;
+        display:block;
+        background:var(--pale);
+    }
+
+    .stage-caption {
+        display:none;
+    }
+
+    .phone {
+        width:100%;
+        height:100vh;
+        height:100dvh;
+        min-height:0;
+        padding:0;
+        border-radius:0;
+        background:none;
+        box-shadow:none;
+    }
+
+    .screen {
+        border-radius:0;
+    }
+
+    .island {
+        display:none;
+    }
+}

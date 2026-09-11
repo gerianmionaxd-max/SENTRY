@@ -732,6 +732,65 @@ function initWorkspace(toast, profiles) {
     updateAccessRightsView();
   };
 
+  /* --- registered guard directory (demo guards + approved accounts) --- */
+
+  const DIRECTORY_AVATARS = [
+    ['#eaf0ff', '#315ce9'], ['#e6f7ee', '#1d7a4c'], ['#fff4dc', '#a56a0a'],
+    ['#f1edff', '#7659df'], ['#e0f5f6', '#0f7d87'], ['#ffeff1', '#c04d5a'],
+  ];
+
+  const directoryStatusOf = name => {
+    const row = $$('#attendanceRows tr').find(item =>
+      item.querySelector('.person strong')?.textContent === name);
+    return row ? row.dataset.status : 'active';
+  };
+
+  const renderGuardDirectory = (query = '') => {
+    const needle = query.trim().toLowerCase();
+    const entries = Object.values(GUARDS).map(guard => ({
+      name: guard.name, id: guard.id, post: guard.post,
+      sub: guard.assignment, contact: guard.phone,
+      image: guard.image, status: directoryStatusOf(guard.name),
+    }));
+
+    getStoredAccounts()
+      .filter(account => account.status === 'Active')
+      .forEach(account => {
+        const name = displayNameOf(account);
+        const tint = DIRECTORY_AVATARS[name.length % DIRECTORY_AVATARS.length];
+        entries.push({
+          name, id: account.userId, post: account.department,
+          sub: [account.city, account.barangay].filter(Boolean).join(', '),
+          contact: account.phone || account.email,
+          initials: name.split(/\s+/).map(word => word[0]).slice(0, 2).join('').toUpperCase(),
+          tint, status: 'active',
+        });
+      });
+
+    const matches = entries.filter(entry =>
+      !needle || `${entry.name} ${entry.id} ${entry.post}`.toLowerCase().includes(needle));
+
+    $('#guardDirectoryCount').textContent = entries.length;
+
+    const pillText = { present: '● On duty', late: '● Late', absent: '● Absent', active: '● Active' };
+    $('#guardDirectoryRows').innerHTML = matches.length
+      ? matches.map(entry => `
+          <tr>
+            <td>
+              <div class="person">
+                ${entry.image
+                  ? `<div class="avatar"><img src="${entry.image}" alt=""></div>`
+                  : `<div class="avatar initials" style="background:${entry.tint[0]};color:${entry.tint[1]}">${entry.initials}</div>`}
+                <div><strong>${escapeHtml(entry.name)}</strong><small>${escapeHtml(entry.id)}</small></div>
+              </div>
+            </td>
+            <td><strong>${escapeHtml(entry.post)}</strong><small>${escapeHtml(entry.sub || '—')}</small></td>
+            <td><strong>${escapeHtml(entry.contact)}</strong></td>
+            <td><span class="status ${entry.status}">${pillText[entry.status]}</span></td>
+          </tr>`).join('')
+      : '<tr><td class="empty-pending" colspan="4">No guards match your search.</td></tr>';
+  };
+
   /* --- panel switching --- */
 
   const setPanel = panel => {
@@ -744,6 +803,7 @@ function initWorkspace(toast, profiles) {
     Object.entries(navItems).forEach(([name, item]) => item.classList.toggle('active', name === panel));
 
     updateSystemCounts();
+    if (panel === 'hr') renderGuardDirectory();
     if (panel === 'admin') {
       renderPendingAccounts();
       renderAccessAssignment();
@@ -815,6 +875,7 @@ function initWorkspace(toast, profiles) {
   });
 
   $('#addEmployee').addEventListener('click', () => openAction('add'));
+  $('#guardDirectorySearch').addEventListener('input', event => renderGuardDirectory(event.target.value));
   $('#createPayroll').addEventListener('click', () => openAction('run', 'payroll'));
   $('#reviewExceptions').addEventListener('click', () => openAction('exceptions'));
   $('#exportAnalytics').addEventListener('click', () => toast('Analytics summary is ready to export'));
