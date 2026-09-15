@@ -191,7 +191,10 @@ function applyIdentity() {
   $('#dDept').textContent = guard.department || 'Security';
   $('#dPhone').textContent = guard.phone || '—';
   $('#dEmail').textContent = guard.email;
-  $('#dAddr').textContent = [guard.street, guard.barangay, guard.city].filter(Boolean).join(', ') || '—';
+  $('#dBirth').textContent = guard.birthday || '—';
+  const locality = [guard.barangay || guard.district, guard.city].filter(Boolean).join(', ');
+  const cityPostal = [locality, guard.postal].filter(Boolean).join(' ');
+  $('#dAddr').textContent = [guard.street, cityPostal, guard.country].filter(Boolean).join(', ') || '—';
 }
 
 function enterApp() {

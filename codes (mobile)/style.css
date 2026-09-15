@@ -976,6 +976,10 @@ body {
     text-overflow:ellipsis;
 }
 
+#dAddr {
+    white-space:normal;
+}
+
 
 /* ==========================================================
    9. TAB BAR & TOAST
