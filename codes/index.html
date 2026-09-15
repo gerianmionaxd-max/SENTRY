@@ -98,8 +98,14 @@
             </div>
           </div>
 
-          <!-- Contact + address rows -->
+          <!-- Birthday + contact -->
           <div class="field-row">
+            <div class="field">
+              <label for="regBirthday">Birthday</label>
+              <input id="regBirthday" name="birthday" type="text" inputmode="numeric"
+                     autocomplete="bday" maxlength="8" placeholder="mm/dd/yy" required>
+              <p class="field-error-message" role="alert" hidden></p>
+            </div>
             <div class="field">
               <label for="regPhone">Phone number</label>
               <div class="phone-input">
@@ -109,24 +115,56 @@
               </div>
               <p class="field-error-message" role="alert" hidden></p>
             </div>
+          </div>
+
+          <!-- Composite address: country -> region -> city -> barangay -->
+          <div class="field-row">
             <div class="field">
-              <label for="regCity">City / Municipality</label>
-              <input id="regCity" name="city" type="text" autocomplete="address-level2"
-                     placeholder="Quezon City" required>
+              <label for="regCountry">Country</label>
+              <select id="regCountry" name="country" autocomplete="country-name" required>
+                <option value="" selected disabled>Select country</option>
+              </select>
+              <p class="field-error-message" role="alert" hidden></p>
+            </div>
+            <div class="field">
+              <label for="regRegion">Region / State</label>
+              <select id="regRegion" name="region" required disabled>
+                <option value="" selected disabled>Select a country first</option>
+              </select>
               <p class="field-error-message" role="alert" hidden></p>
             </div>
           </div>
 
-          <div class="field-row split-40-60">
+          <div class="field-row">
             <div class="field">
-              <label for="regBarangay">Barangay</label>
-              <input id="regBarangay" name="barangay" type="text" placeholder="Commonwealth" required>
+              <label for="regCity">City / Municipality</label>
+              <select id="regCity" name="city" autocomplete="address-level2" required disabled>
+                <option value="" selected disabled>Select a region first</option>
+              </select>
               <p class="field-error-message" role="alert" hidden></p>
             </div>
+            <div class="field">
+              <label id="regBarangayLabel" for="regBarangay">Barangay</label>
+              <select id="regBarangay" name="barangay" required disabled>
+                <option value="" selected disabled>Select a city first</option>
+              </select>
+              <input id="regDistrict" name="district" type="text"
+                     placeholder="District / suburb (optional)" hidden disabled>
+              <p class="field-error-message" role="alert" hidden></p>
+            </div>
+          </div>
+
+          <div class="field-row split-60-40">
             <div class="field">
               <label for="regStreet">Street / House no.</label>
               <input id="regStreet" name="street" type="text" autocomplete="street-address"
                      placeholder="Blk 4 Lot 12, Commonwealth Ave." required>
+              <p class="field-error-message" role="alert" hidden></p>
+            </div>
+            <div class="field">
+              <label for="regPostal">Postal code</label>
+              <input id="regPostal" name="postal" type="text" autocomplete="postal-code"
+                     maxlength="10" placeholder="1800" required>
               <p class="field-error-message" role="alert" hidden></p>
             </div>
           </div>
@@ -872,5 +910,5 @@
   <div class="toast" id="toast">QR scanner is ready to launch</div>
 
   <script src="script.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3977b11f9788b3f',t:'MTc4OTEzODE4Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3b4b30c0b1212bb',t:'MTc4OTQ0NDU2Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

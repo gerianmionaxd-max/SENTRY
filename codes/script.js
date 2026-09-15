@@ -80,6 +80,273 @@ const PAYROLL_ACTION_RECORDS = {
   ],
 };
 
+/* ------------------------------------------------------------------
+   Composite address data: country -> region -> city -> barangay.
+   Philippines entries map region -> city -> barangay list; other
+   countries map region -> city list (barangay becomes an optional
+   free-text district field for those).
+------------------------------------------------------------------ */
+
+const ADDRESS_DATA = {
+  Philippines: {
+    'Metro Manila (NCR)': {
+      'Quezon City': ['Commonwealth', 'Batasan Hills', 'Payatas'],
+      'Manila': ['Sampaloc', 'Tondo', 'Quiapo'],
+      'Makati': ['Bel-Air', 'Poblacion', 'Guadalupe Nuevo'],
+      'Caloocan': ['Bagong Barrio', 'Camarin', 'Tala'],
+      'Pasig': ['Kapitolyo', 'Rosario', 'Ugong'],
+      'Taguig': ['Ususan', 'Western Bicutan', 'Pinagsama'],
+    },
+    'Ilocos Region (Region I)': {
+      'Laoag City': ['San Lorenzo', 'Sta. Joaquina', 'Nalbo'],
+      'Vigan City': ['Beddeng Daya', 'Cabaroan', 'Mindoro'],
+      'San Fernando City': ['Catbangen', 'Pagdaraoan', 'Tanqui'],
+      'Dagupan City': ['Pantal', 'Lucao', 'Bonuan Gueset'],
+      'Batac City': ['Baay', 'Bungon', 'San Mateo'],
+    },
+    'Cagayan Valley (Region II)': {
+      'Tuguegarao City': ['Annafunan', 'Carig Sur', 'Centro 01'],
+      'Ilagan City': ['Alibagu', 'Centro Poblacion', 'San Vicente'],
+      'Cauayan City': ['District I Poblacion', 'San Fermin', 'Villa Luna'],
+      'Santiago City': ['Centro East', 'Divisoria', 'Mabini'],
+    },
+    'Central Luzon (Region III)': {
+      'San Fernando': ['Del Pilar', 'Dolores', 'San Jose'],
+      'Angeles City': ['Balibago', 'Pampang', 'Cutcut'],
+      'Cabanatuan City': ['Aduas Centro', 'Daan Sarile', 'Valle Cruz'],
+      'Olongapo City': ['Barretto', 'East Bajac-Bajac', 'Pag-Asa'],
+      'Malolos City': ['Bulihan', 'Mojon', 'Dakila'],
+      'Tarlac City': ['San Roque', 'San Vicente', 'Armenia'],
+    },
+    'CALABARZON (Region IV-A)': {
+      'Calamba City': ['Poblacion', 'Bucal', 'Real'],
+      'Batangas City': ['Poblacion', 'Alangilan', 'Balete'],
+      'Lucena City': ['Ibabang Dupay', 'Gulang-Gulang', 'Dalahican'],
+      'Antipolo City': ['Dela Paz', 'San Jose', 'Cupang'],
+      'Dasmariñas City': ['Sampaloc I', 'Langkaan I', 'San Agustin'],
+      'Santa Rosa City': ['Balibago', 'Dila', 'Malusak'],
+    },
+    'MIMAROPA (Region IV-B)': {
+      'Calapan City': ['Guinobatan', 'Lalud', 'San Vicente Norte'],
+      'Puerto Princesa City': ['San Miguel', 'Tiniguiban', 'San Pedro'],
+      'Odiongan': ['Dapawan', 'Poblacion', 'Progreso Este'],
+      'Boac': ['Poblacion', 'Tampus', 'Malusak'],
+      'Roxas': ['Barangay I Poblacion', 'San Manuel', 'New Barbacan'],
+    },
+    'Bicol Region (Region V)': {
+      'Legazpi City': ['Bitano', 'Bonot', 'Pawa'],
+      'Naga City': ['Concepcion Pequeña', 'Dayangdang', 'Abella'],
+      'Sorsogon City': ['Salog', 'Sirangan', 'Talisay'],
+      'Tabaco City': ['Bombon', 'San Lorenzo', 'Quinale'],
+      'Iriga City': ['San Francisco', 'San Miguel', 'Perpetual Help'],
+    },
+    'Western Visayas (Region VI)': {
+      'Iloilo City': ['Benedicto', 'Sambag', 'Our Lady of Lourdes'],
+      'Roxas City': ['Poblacion I', 'Bolo', 'Dayao'],
+      'Passi City': ['Poblacion Ilawod', 'Imbang Grande', 'Agdayao'],
+      'Kalibo': ['Poblacion', 'Andagao', 'Tigayon'],
+    },
+    'Central Visayas (Region VII)': {
+      'Cebu City': ['Lahug', 'Guadalupe', 'Mabolo'],
+      'Mandaue City': ['Centro', 'Tipolo', 'Basak'],
+      'Lapu-Lapu City': ['Pusok', 'Basak', 'Pajo'],
+      'Tagbilaran City': ['Poblacion I', 'Dao', 'Manga'],
+      'Talisay City': ['Poblacion', 'Tabunok', 'Lawaan'],
+    },
+    'Eastern Visayas (Region VIII)': {
+      'Tacloban City': ['Barangay 34 Downtown', 'Barangay 62 Sagkahan', 'Barangay 90 San Jose'],
+      'Ormoc City': ['Cogon', 'Punta', 'Linao'],
+      'Catbalogan City': ['Canlapwas', 'Mercedes', 'Guinsorongan'],
+      'Borongan City': ['Songco', 'Taboc', 'Alang-Alang'],
+    },
+    'Zamboanga Peninsula (Region IX)': {
+      'Zamboanga City': ['Zone I Poblacion', 'Tetuan', 'Putik'],
+      'Pagadian City': ['San Pedro', 'Santiago', 'Kawit'],
+      'Dipolog City': ['Central', 'Dicayas', 'Olingan'],
+      'Dapitan City': ['San Vicente', 'Banonong', 'Potungan'],
+    },
+    'Northern Mindanao (Region X)': {
+      'Cagayan de Oro City': ['Carmen', 'Bulua', 'Lapasan'],
+      'Iligan City': ['Poblacion', 'Pala-o', 'Tubod'],
+      'Malaybalay City': ['Sumpong', 'Casisang', 'Aglayan'],
+      'Valencia City': ['Poblacion', 'Lumbo', 'Bagontaas'],
+      'Ozamiz City': ['Aguada', 'Manaka', 'Tinago'],
+    },
+    'Davao Region (Region XI)': {
+      'Davao City': ['Buhangin', 'Matina Aplaya', 'Toril Poblacion'],
+      'Tagum City': ['Visayan Village', 'Mankilam', 'Magugpo Poblacion'],
+      'Mati City': ['Central', 'Sainz', 'Matiao'],
+      'Digos City': ['Tres de Mayo', 'San Miguel', 'Aplaya'],
+      'Panabo City': ['San Pedro', 'Cagangohan', 'New Visayas'],
+    },
+    'SOCCSKSARGEN (Region XII)': {
+      'Koronadal City': ['General Paulino Santos', 'Rotonda', 'Zone III'],
+      'General Santos City': ['Lagao', 'Apopong', 'Fatima'],
+      'Tacurong City': ['Poblacion', 'New Isabela', 'San Pablo'],
+      'Kidapawan City': ['Poblacion', 'Amas', 'Sudapin'],
+    },
+    'Caraga (Region XIII)': {
+      'Butuan City': ['Ampayon', 'Libertad', 'Villa Kananga'],
+      'Surigao City': ['Taft', 'Washington', 'Sabang'],
+      'Tandag City': ['Dagocdoc', 'Telaje', 'San Isidro'],
+      'Cabadbaran City': ['Comagascas', 'Del Pilar', 'Mabini'],
+      'Bayugan City': ['Poblacion', 'Taglatawan', 'Noli'],
+    },
+    'Cordillera (CAR)': {
+      'Baguio City': ['A. Bonifacio-Caguioa-Rimando', 'Gibraltar', 'Session Road'],
+      'Tabuk City': ['Dagupan Centro', 'Bulanao', 'Appas'],
+      'La Trinidad': ['Poblacion', 'Balili', 'Pico'],
+      'Bontoc': ['Poblacion', 'Samoki', 'Caluttit'],
+    },
+    'BARMM': {
+      'Cotabato City': ['Rosary Heights IV', 'Poblacion', 'Tamontaka'],
+      'Marawi City': ['Sabala Manao', 'Dansalan', 'Marinaut'],
+      'Lamitan City': ['Colonia', 'Kulay Bato', 'Sengal'],
+      'Jolo': ['Alat', 'San Raymundo', 'Asturias'],
+    },
+    'Negros Island Region (NIR)': {
+      'Bacolod City': ['Villamonte', 'Tangub', 'Mandalagan'],
+      'Dumaguete City': ['Piapi', 'Bantayan', 'Junob'],
+      'Bais City': ['Barangay I Poblacion', 'Cambagahan', 'Sab-ahan'],
+      'Bayawan City': ['Poblacion', 'Ubos', 'Villareal'],
+      'Siquijor': ['Poblacion', 'Cangmunag', 'Pasihagon'],
+    },
+  },
+  'United States': {
+    'California': ['Los Angeles', 'San Francisco', 'San Diego'],
+    'Texas': ['Houston', 'Dallas', 'Austin'],
+    'Florida': ['Miami', 'Orlando', 'Tampa'],
+    'New York': ['New York City', 'Buffalo', 'Rochester'],
+  },
+  'Canada': {
+    'Ontario': ['Toronto', 'Ottawa', 'Mississauga'],
+    'British Columbia': ['Vancouver', 'Surrey', 'Burnaby'],
+    'Alberta': ['Calgary', 'Edmonton', 'Red Deer'],
+    'Quebec': ['Montreal', 'Quebec City', 'Laval'],
+  },
+  'Australia': {
+    'New South Wales': ['Sydney', 'Newcastle', 'Wollongong'],
+    'Victoria': ['Melbourne', 'Geelong', 'Ballarat'],
+    'Queensland': ['Brisbane', 'Gold Coast', 'Cairns'],
+  },
+  'Japan': {
+    'Tokyo': ['Shinjuku', 'Shibuya', 'Shinagawa'],
+    'Osaka': ['Osaka City', 'Sakai', 'Higashiosaka'],
+    'Kanagawa': ['Yokohama', 'Kawasaki', 'Yokosuka'],
+  },
+  'United Kingdom': {
+    'England': ['London', 'Manchester', 'Birmingham'],
+    'Scotland': ['Glasgow', 'Edinburgh', 'Aberdeen'],
+    'Wales': ['Cardiff', 'Swansea', 'Newport'],
+  },
+  'United Arab Emirates': {
+    'Dubai': ['Deira', 'Bur Dubai', 'Jumeirah'],
+    'Abu Dhabi': ['Abu Dhabi City', 'Al Ain', 'Madinat Zayed'],
+    'Sharjah': ['Sharjah City', 'Khor Fakkan', 'Kalba'],
+  },
+};
+
+/* True when a country's regions map cities to barangay lists (PH shape) */
+function hasBarangays(country) {
+  const regions = ADDRESS_DATA[country] || {};
+  const first = Object.values(regions)[0];
+  return !!first && typeof first === 'object' && !Array.isArray(first);
+}
+
+function fillSelect(select, options, placeholder) {
+  select.innerHTML = `<option value="" selected disabled>${placeholder}</option>` +
+    options.map(option => `<option>${option}</option>`).join('');
+}
+
+/* Cascading country -> region -> city -> barangay + birthday mask */
+function initAddressCascade() {
+  const form = $('#registrationForm');
+  const country = form.elements.country;
+  const region = form.elements.region;
+  const city = form.elements.city;
+  const barangay = form.elements.barangay;
+  const district = form.elements.district;
+  const label = $('#regBarangayLabel');
+  const birthday = form.elements.birthday;
+
+  const clearOwnError = control => {
+    const field = control.closest('.field');
+    if (field?.classList.contains('invalid')) clearFieldError(field);
+  };
+
+  /* Barangay dropdown (PH) or optional district text box (abroad) */
+  const setDistrictMode = abroad => {
+    barangay.hidden = abroad;
+    barangay.disabled = abroad;
+    district.hidden = !abroad;
+    district.disabled = !abroad;
+    label.htmlFor = abroad ? 'regDistrict' : 'regBarangay';
+    label.innerHTML = abroad
+      ? 'District / Suburb <span class="optional-tag">Optional</span>'
+      : 'Barangay';
+    if (abroad) barangay.selectedIndex = 0;
+    else district.value = '';
+  };
+
+  fillSelect(country, Object.keys(ADDRESS_DATA), 'Select country');
+
+  country.addEventListener('change', () => {
+    fillSelect(region, Object.keys(ADDRESS_DATA[country.value]), 'Select region / state');
+    region.disabled = false;
+    fillSelect(city, [], 'Select a region first');
+    city.disabled = true;
+    fillSelect(barangay, [], 'Select a city first');
+    barangay.disabled = true;
+    setDistrictMode(!hasBarangays(country.value));
+    [region, city, barangay].forEach(clearOwnError);
+  });
+
+  region.addEventListener('change', () => {
+    const places = ADDRESS_DATA[country.value][region.value];
+    fillSelect(city, Array.isArray(places) ? places : Object.keys(places), 'Select city / municipality');
+    city.disabled = false;
+    fillSelect(barangay, [], 'Select a city first');
+    barangay.disabled = true;
+    [city, barangay].forEach(clearOwnError);
+  });
+
+  city.addEventListener('change', () => {
+    if (hasBarangays(country.value)) {
+      fillSelect(barangay, ADDRESS_DATA[country.value][region.value][city.value], 'Select barangay');
+      barangay.disabled = false;
+    }
+    clearOwnError(barangay);
+  });
+
+  /* Birthday auto-mask: digits become mm/dd/yy as you type */
+  birthday.addEventListener('input', () => {
+    const digits = birthday.value.replace(/\D/g, '').slice(0, 6);
+    let masked = digits.slice(0, 2);
+    if (digits.length > 2) masked += '/' + digits.slice(2, 4);
+    if (digits.length > 4) masked += '/' + digits.slice(4, 6);
+    birthday.value = masked;
+  });
+}
+
+/* Restore the cascade to its pristine state (after a successful submit) */
+function resetAddressCascade() {
+  const form = $('#registrationForm');
+  fillSelect(form.elements.country, Object.keys(ADDRESS_DATA), 'Select country');
+  fillSelect(form.elements.region, [], 'Select a country first');
+  form.elements.region.disabled = true;
+  fillSelect(form.elements.city, [], 'Select a region first');
+  form.elements.city.disabled = true;
+  fillSelect(form.elements.barangay, [], 'Select a city first');
+  form.elements.barangay.disabled = true;
+  form.elements.barangay.hidden = false;
+  form.elements.district.hidden = true;
+  form.elements.district.disabled = true;
+  const label = $('#regBarangayLabel');
+  label.htmlFor = 'regBarangay';
+  label.textContent = 'Barangay';
+}
+
+
 /* Actions that open the period/output report form */
 const REPORT_ACTIONS = ['report', 'reports', 'run'];
 
@@ -240,9 +507,50 @@ function validateRegistrationForm(form) {
     flag('phone', 'Enter a valid Philippine mobile number: 10 digits starting with 9 (e.g. 917 555 0182).');
   }
 
-  if (!clean('city')) flag('city', 'Enter your city or municipality.');
-  if (!clean('barangay')) flag('barangay', 'Enter your barangay.');
+  /* Composite address: country -> region -> city -> barangay */
+  const isPhilippines = clean('country') === 'Philippines';
+  if (!clean('country')) flag('country', 'Select your country.');
+  if (!clean('region')) flag('region', 'Select your region or state.');
+  if (!clean('city')) flag('city', 'Select your city or municipality.');
+  if (isPhilippines && !clean('barangay')) flag('barangay', 'Select your barangay.');
+
+  const district = clean('district');
+  if (!isPhilippines && district && !/^[A-Za-z0-9\s.'-]+$/.test(district)) {
+    flag('district', 'Use letters, numbers, spaces and hyphens only.');
+  }
+
   if (!clean('street')) flag('street', 'Enter your street or house number.');
+  else if (clean('street').length < 4) flag('street', 'Street address looks too short.');
+
+  const postal = clean('postal');
+  if (!postal) flag('postal', 'Enter your postal code.');
+  else if (isPhilippines && !/^\d{4}$/.test(postal)) {
+    flag('postal', 'Enter your 4-digit postal code (e.g. 1800).');
+  } else if (!isPhilippines && !/^[A-Za-z0-9][A-Za-z0-9 \-]{1,8}[A-Za-z0-9]$/.test(postal)) {
+    flag('postal', 'Enter a valid postal or ZIP code.');
+  }
+
+  /* Birthday in mm/dd/yy: real date, age 18-100 (yy pivots on this year) */
+  const birthday = clean('birthday');
+  let birthDate = '';
+  if (!birthday) flag('birthday', 'Enter your birthday.');
+  else if (!/^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/\d{2}$/.test(birthday)) {
+    flag('birthday', 'Use mm/dd/yy format (e.g. 04/15/98).');
+  } else {
+    const [month, day, shortYear] = birthday.split('/').map(Number);
+    const fullYear = shortYear <= new Date().getFullYear() % 100 ? 2000 + shortYear : 1900 + shortYear;
+    const date = new Date(fullYear, month - 1, day);
+    const real = date.getFullYear() === fullYear && date.getMonth() === month - 1 && date.getDate() === day;
+    if (!real) flag('birthday', 'Enter a real calendar date.');
+    else {
+      const now = new Date();
+      let age = now.getFullYear() - fullYear;
+      if ((now.getMonth() + 1) * 100 + now.getDate() < month * 100 + day) age -= 1;
+      if (age < 18) flag('birthday', 'You must be at least 18 years old to register.');
+      else if (age > 100) flag('birthday', 'Please check your birth year.');
+      else birthDate = `${fullYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+  }
   if (!clean('department')) flag('department', 'Select your department.');
 
   const email = clean('email');
@@ -272,9 +580,15 @@ function validateRegistrationForm(form) {
       lastName: clean('lastName'),
       gender: clean('gender'),
       phone: phone ? `+63${phone}` : '',
+      birthday,
+      birthDate,
+      country: clean('country'),
+      region: clean('region'),
       city: clean('city'),
       barangay: clean('barangay'),
+      district,
       street: clean('street'),
+      postal: clean('postal'),
       department: clean('department'),
       email,
       password,
@@ -408,6 +722,7 @@ function initAuthentication() {
 
     saveStoredAccounts(requests);
     registrationForm.reset();
+    resetAddressCascade();
     $$('.field', registrationForm).forEach(clearFieldError);
     message.textContent = existingAccount
       ? 'Your account request was resubmitted. Please wait for administrator approval.'
@@ -943,6 +1258,7 @@ function initDashboard() {
   const toast = createToast($('#toast'));
 
   initAuthentication();
+  initAddressCascade();
   initAttendance(toast);
   updateSystemCounts();
   initScanner();

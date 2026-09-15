@@ -1881,6 +1881,12 @@ body.admin-panel-active .admin-panel {
     outline-color:#315ce9;
 }
 
+/* Cascading address swap: only one of barangay select / district input shows */
+.auth-panel input[hidden],
+.auth-panel select[hidden] {
+    display:none;
+}
+
 .remember-option {
     display:flex !important;
     align-items:center;
@@ -2609,9 +2615,13 @@ body.admin-panel-active .admin-panel {
     font-size:10px;
 }
 
-/* Uneven split for short + long inputs (barangay / street) */
+/* Uneven two-column rows */
 .field-row.split-40-60 {
     grid-template-columns:1fr 1.4fr;
+}
+
+.field-row.split-60-40 {
+    grid-template-columns:1.6fr 1fr;
 }
 
 .register-mode .registration-note {
@@ -2647,7 +2657,8 @@ body.admin-panel-active .admin-panel {
 
 /* Phone layout stacks every row, including uneven splits */
 @media (max-width:700px) {
-    .field-row.split-40-60 {
+    .field-row.split-40-60,
+    .field-row.split-60-40 {
         grid-template-columns:1fr;
     }
 }
