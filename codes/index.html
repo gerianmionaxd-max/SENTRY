@@ -907,8 +907,31 @@
     </div>
   </div>
 
+  <div class="hr-action-modal" id="postAssignModal" role="dialog" aria-modal="true" aria-labelledby="postAssignTitle" hidden>
+    <div class="hr-action-dialog">
+      <button class="modal-close" id="closePostAssign" type="button" aria-label="Close post assignment">×</button>
+      <p class="eyebrow">HR STAFF WORKSPACE</p>
+      <h2 id="postAssignTitle">Assign designated post</h2>
+      <p id="postAssignGuard"></p>
+      <form id="postAssignForm" class="hr-form">
+        <label>Designated post
+          <input id="postAssignSite" list="postSiteOptions" placeholder="e.g. Trinitarian Centre" autocomplete="off">
+          <datalist id="postSiteOptions"></datalist>
+        </label>
+        <label>Assignment detail (optional)
+          <input id="postAssignDetail" placeholder="e.g. Main Gate · Day shift" autocomplete="off">
+        </label>
+        <p class="post-assign-error" id="postAssignError" hidden>Enter the guard's designated post.</p>
+        <div class="post-assign-buttons">
+          <button type="submit">Save post</button>
+          <button class="post-assign-cancel" id="cancelPostAssign" type="button">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="toast" id="toast">QR scanner is ready to launch</div>
 
   <script src="script.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3b4b30c0b1212bb',t:'MTc4OTQ0NDU2Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3bf14d018207a6c',t:'MTc4OTU1MzQyNQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

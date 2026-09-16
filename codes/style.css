@@ -1392,6 +1392,41 @@ body.admin-panel-active .admin-panel {
     cursor:pointer;
 }
 
+.post-assign-btn {
+    display:inline-block;
+    margin-top:6px;
+    padding:4px 12px;
+    border:1px solid #cfdaf5;
+    border-radius:999px;
+    background:#eef3ff;
+    color:#315ce9;
+    font:700 11px Manrope;
+    cursor:pointer;
+}
+
+.post-assign-btn:hover {
+    background:#dce7ff;
+}
+
+.post-assign-error {
+    color:#c04d5a;
+    font-size:12px;
+}
+
+.post-assign-buttons {
+    display:flex;
+    gap:10px;
+}
+
+.post-assign-buttons button {
+    flex:1;
+}
+
+.post-assign-buttons .post-assign-cancel {
+    background:#eef1f6;
+    color:#536077;
+}
+
 .hr-record-list {
     display:grid;
     gap:8px;

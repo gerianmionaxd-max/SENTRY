@@ -397,6 +397,59 @@ function saveStoredAccounts(accounts) {
   localStorage.removeItem(LEGACY_PENDING_ACCOUNTS_KEY);
 }
 
+/* Guard IDs look like SG-2026-0242: "SG", the registration year and a
+   4-digit user number that stays unique across demo and staff guards. */
+const GUARD_ID_PATTERN = /^SG-(\d{4})-(\d{4})$/;
+const MOBILE_TODAY_KEY_PREFIX = 'sentryGuardToday_';
+
+function usedGuardNumbers(extraAccounts = []) {
+  const used = new Set();
+  const collect = id => {
+    const match = GUARD_ID_PATTERN.exec(id || '');
+    if (match) used.add(Number(match[2]));
+  };
+  Object.values(GUARDS).forEach(guard => collect(guard.id));
+  getStoredAccounts().forEach(account => collect(account.userId));
+  extraAccounts.forEach(account => collect(account.userId));
+  return used;
+}
+
+function nextGuardId(year, used = usedGuardNumbers()) {
+  const next = (used.size ? Math.max(...used) : 0) + 1;
+  used.add(next);
+  return `SG-${year}-${String(next).padStart(4, '0')}`;
+}
+
+function registrationYearOf(account) {
+  const year = new Date(account.requestedAt || Date.now()).getFullYear();
+  return Number.isFinite(year) ? year : new Date().getFullYear();
+}
+
+/* One-time upgrade: legacy USR-<timestamp> ids become SG-YYYY-NNNN so old
+   staff accounts match the demo guard format. The guard's in-progress
+   mobile day state moves to the new id when one exists. */
+function migrateStoredAccounts() {
+  let accounts = readStoredList(USER_ACCOUNTS_KEY);
+  if (!accounts.length) accounts = readStoredList(LEGACY_PENDING_ACCOUNTS_KEY);
+  if (!accounts.length) return;
+  const used = usedGuardNumbers();
+  let changed = false;
+  accounts.forEach(account => {
+    if (GUARD_ID_PATTERN.test(account.userId || '')) return;
+    const oldTodayKey = MOBILE_TODAY_KEY_PREFIX + account.userId;
+    account.userId = nextGuardId(registrationYearOf(account), used);
+    try {
+      const dayState = localStorage.getItem(oldTodayKey);
+      if (dayState !== null) {
+        localStorage.setItem(MOBILE_TODAY_KEY_PREFIX + account.userId, dayState);
+        localStorage.removeItem(oldTodayKey);
+      }
+    } catch { /* private mode: keep going without the day state */ }
+    changed = true;
+  });
+  if (changed) saveStoredAccounts(accounts);
+}
+
 
 /* ------------------------------------------------------------------
    Small helpers
@@ -717,7 +770,7 @@ function initAuthentication() {
     if (existingAccount) {
       Object.assign(existingAccount, details, { status: 'Pending', requestedAt });
     } else {
-      requests.push({ userId: `USR-${Date.now()}`, ...details, status: 'Pending', requestedAt });
+      requests.push({ userId: nextGuardId(new Date().getFullYear()), ...details, status: 'Pending', requestedAt });
     }
 
     saveStoredAccounts(requests);
@@ -1074,11 +1127,13 @@ function initWorkspace(toast, profiles) {
         const name = displayNameOf(account);
         const tint = DIRECTORY_AVATARS[name.length % DIRECTORY_AVATARS.length];
         entries.push({
-          name, id: account.userId, post: account.department,
-          sub: [account.city, account.barangay].filter(Boolean).join(', '),
+          name, id: account.userId,
+          post: account.post || account.department,
+          sub: account.post ? (account.assignment || account.department) : 'No post assigned',
           contact: account.phone || account.email,
           initials: name.split(/\s+/).map(word => word[0]).slice(0, 2).join('').toUpperCase(),
           tint, status: 'active',
+          userId: account.userId, hasPost: !!account.post,
         });
       });
 
@@ -1099,12 +1154,62 @@ function initWorkspace(toast, profiles) {
                 <div><strong>${escapeHtml(entry.name)}</strong><small>${escapeHtml(entry.id)}</small></div>
               </div>
             </td>
-            <td><strong>${escapeHtml(entry.post)}</strong><small>${escapeHtml(entry.sub || '—')}</small></td>
+            <td><strong>${escapeHtml(entry.post)}</strong><small>${escapeHtml(entry.sub || '—')}</small>${entry.userId ? `<button class="post-assign-btn" data-assign-post="${escapeHtml(entry.userId)}" type="button">${entry.hasPost ? 'Change' : 'Assign post'}</button>` : ''}</td>
             <td><strong>${escapeHtml(entry.contact)}</strong></td>
             <td><span class="status ${entry.status}">${pillText[entry.status]}</span></td>
           </tr>`).join('')
       : '<tr><td class="empty-pending" colspan="4">No guards match your search.</td></tr>';
   };
+
+  /* --- designated post assignment (approved staff accounts) --- */
+
+  const postModal = $('#postAssignModal');
+  const postForm = $('#postAssignForm');
+  const postSite = $('#postAssignSite');
+  const postDetail = $('#postAssignDetail');
+  const postError = $('#postAssignError');
+  let postTargetId = '';
+
+  /* Existing demo sites as suggestions so HR reuses consistent post names */
+  $('#postSiteOptions').innerHTML = [...new Set(Object.values(GUARDS).map(guard => guard.post))]
+    .map(site => `<option value="${escapeHtml(site)}">`).join('');
+
+  const closePostModal = () => { postModal.hidden = true; postTargetId = ''; };
+
+  $('#guardDirectoryRows').addEventListener('click', event => {
+    const button = event.target.closest('[data-assign-post]');
+    if (!button) return;
+    const account = getStoredAccounts().find(item => item.userId === button.dataset.assignPost);
+    if (!account) return;
+    postTargetId = account.userId;
+    $('#postAssignTitle').textContent = account.post ? 'Change designated post' : 'Assign designated post';
+    $('#postAssignGuard').textContent = `${displayNameOf(account)} · ${account.userId}`;
+    postSite.value = account.post || '';
+    postDetail.value = account.assignment || '';
+    postError.hidden = true;
+    postModal.hidden = false;
+    postSite.focus();
+  });
+
+  postForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const accounts = getStoredAccounts();
+    const account = accounts.find(item => item.userId === postTargetId);
+    if (!account) { closePostModal(); return; }
+    const site = postSite.value.trim();
+    if (!site) { postError.hidden = false; postSite.focus(); return; }
+    account.post = site;
+    account.assignment = postDetail.value.trim();
+    saveStoredAccounts(accounts);
+    closePostModal();
+    renderGuardDirectory($('#guardDirectorySearch').value);
+    toast(`Designated post assigned to ${displayNameOf(account)}`);
+  });
+
+  postSite.addEventListener('input', () => { postError.hidden = true; });
+  $('#closePostAssign').addEventListener('click', closePostModal);
+  $('#cancelPostAssign').addEventListener('click', closePostModal);
+  closeWhenBackdropIsClicked(postModal, closePostModal);
 
   /* --- panel switching --- */
 
@@ -1255,6 +1360,7 @@ function initWorkspace(toast, profiles) {
 ------------------------------------------------------------------ */
 
 function initDashboard() {
+  migrateStoredAccounts();
   const toast = createToast($('#toast'));
 
   initAuthentication();

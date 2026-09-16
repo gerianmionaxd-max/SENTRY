@@ -976,7 +976,8 @@ body {
     text-overflow:ellipsis;
 }
 
-#dAddr {
+#dAddr,
+#dPost {
     white-space:normal;
 }
 

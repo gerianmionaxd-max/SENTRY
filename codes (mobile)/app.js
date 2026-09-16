@@ -189,6 +189,7 @@ function applyIdentity() {
 
   $('#dId').textContent = guard.userId;
   $('#dDept').textContent = guard.department || 'Security';
+  $('#dPost').textContent = [guard.post, guard.assignment].filter(Boolean).join(' · ') || 'Not yet assigned';
   $('#dPhone').textContent = guard.phone || '—';
   $('#dEmail').textContent = guard.email;
   $('#dBirth').textContent = guard.birthday || '—';
