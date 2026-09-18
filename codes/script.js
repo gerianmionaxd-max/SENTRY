@@ -401,6 +401,7 @@ function saveStoredAccounts(accounts) {
    4-digit user number that stays unique across demo and staff guards. */
 const GUARD_ID_PATTERN = /^SG-(\d{4})-(\d{4})$/;
 const MOBILE_TODAY_KEY_PREFIX = 'sentryGuardToday_';
+const MOBILE_POSTS_KEY_PREFIX = 'sentryGuardPosts_';
 
 function usedGuardNumbers(extraAccounts = []) {
   const used = new Set();
@@ -436,15 +437,17 @@ function migrateStoredAccounts() {
   let changed = false;
   accounts.forEach(account => {
     if (GUARD_ID_PATTERN.test(account.userId || '')) return;
-    const oldTodayKey = MOBILE_TODAY_KEY_PREFIX + account.userId;
+    const oldId = account.userId;
     account.userId = nextGuardId(registrationYearOf(account), used);
-    try {
-      const dayState = localStorage.getItem(oldTodayKey);
-      if (dayState !== null) {
-        localStorage.setItem(MOBILE_TODAY_KEY_PREFIX + account.userId, dayState);
-        localStorage.removeItem(oldTodayKey);
-      }
-    } catch { /* private mode: keep going without the day state */ }
+    [MOBILE_TODAY_KEY_PREFIX, MOBILE_POSTS_KEY_PREFIX].forEach(prefix => {
+      try {
+        const saved = localStorage.getItem(prefix + oldId);
+        if (saved !== null) {
+          localStorage.setItem(prefix + account.userId, saved);
+          localStorage.removeItem(prefix + oldId);
+        }
+      } catch { /* private mode: keep going without the carried state */ }
+    });
     changed = true;
   });
   if (changed) saveStoredAccounts(accounts);
@@ -1220,19 +1223,65 @@ function initWorkspace(toast, profiles) {
 
   const pendingAccountRows = $('#pendingAccountRows');
   const pendingAccountCount = $('#pendingAccountCount');
-  const accessAssignmentForm = $('#accessAssignmentForm');
-  const accessUserId = $('#accessUserId');
-  const accessExpiration = $('#accessExpiration');
-  const rightInputs = {
-    Read: $('#accessRead'),
-    Write: $('#accessWrite'),
-    Execute: $('#accessExecute'),
-    Admin: $('#accessAdmin'),
-  };
+  const userAccountRows = $('#userAccountRows');
+  const userAccountCount = $('#userAccountCount');
+  const openViewAccounts = $('#openViewAccounts');
+  const openManageAccounts = $('#openManageAccounts');
+  const activeAccountsPage = $('#activeAccountsPage');
+  const activeAccountsPageCount = $('#activeAccountsPageCount');
+  const activeAccountsPageBody = $('#activeAccountsPageBody');
+  const activeAccountsSearch = $('#activeAccountsSearch');
+  const backToAdminPanel = $('#backToAdminPanel');
+  const manageAccountsPage = $('#manageAccountsPage');
+  const manageAccountsPageCount = $('#manageAccountsPageCount');
+  const manageAccountsPageBody = $('#manageAccountsPageBody');
+  const manageAccountsSearch = $('#manageAccountsSearch');
+  const backToAdminFromManage = $('#backToAdminFromManage');
 
   const closeActionModal = () => { actionModal.hidden = true; };
 
-  /* --- pending account approvals --- */
+  /* --- pending account approvals + access assignment --- */
+
+  const accountRegisteredLabel = account => {
+    const stamp = account.requestedAt ? new Date(account.requestedAt) : null;
+    if (!stamp || Number.isNaN(stamp.getTime())) return '—';
+    return stamp.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  const birthdayLabelOf = account => {
+    if (account.birthDate) {
+      const date = new Date(`${account.birthDate}T00:00:00`);
+      if (!Number.isNaN(date.getTime())) {
+        return date.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
+      }
+    }
+    return account.birthday || '—';
+  };
+
+  const fullAddressOf = account => [
+    account.street,
+    account.barangay || account.district,
+    account.city,
+    account.region,
+    account.country,
+    account.postal,
+  ].filter(Boolean).join(', ') || '—';
+
+  const accountSearchText = account => [
+    account.userId,
+    displayNameOf(account),
+    account.email,
+    account.department,
+    account.gender,
+    account.phone,
+    fullAddressOf(account),
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  const rightsCheckboxesHtml = account => {
+    const rights = account.accessRights?.length ? account.accessRights : accessForDepartment(account.department);
+    return ['Read', 'Write', 'Execute', 'Admin'].map(right => `
+      <label><input type="checkbox" data-access-right="${right}"${rights.includes(right) ? ' checked' : ''}> ${right}</label>`).join('');
+  };
 
   const renderPendingAccounts = () => {
     const pendingAccounts = getStoredAccounts().filter(account => account.status === 'Pending');
@@ -1246,6 +1295,8 @@ function initWorkspace(toast, profiles) {
             <td>${escapeHtml(account.email)}</td>
             <td>${escapeHtml(account.department)}</td>
             <td><span class="pending-status">Pending</span></td>
+            <td><div class="pending-rights">${rightsCheckboxesHtml(account)}</div></td>
+            <td><input class="pending-expiration" type="date" value="${escapeHtml(account.expirationDate || '')}" aria-label="Expiration date for ${escapeHtml(displayNameOf(account))}"></td>
             <td>
               <div class="account-actions">
                 <button class="approve-account" data-account-action="approve"
@@ -1255,31 +1306,168 @@ function initWorkspace(toast, profiles) {
               </div>
             </td>
           </tr>`).join('')
-      : '<tr><td class="empty-pending" colspan="6">No account requests are awaiting approval.</td></tr>';
+      : '<tr><td class="empty-pending" colspan="8">No account requests are awaiting approval.</td></tr>';
   };
 
-  /* --- role and access assignment --- */
+  /* --- active user account storage (approved accounts only) --- */
 
-  const updateAccessRightsView = () => {
-    const account = getStoredAccounts().find(item => item.userId === accessUserId.value);
-    const rights = account?.accessRights || (account ? accessForDepartment(account.department) : []);
-
-    Object.entries(rightInputs).forEach(([right, input]) => { input.checked = rights.includes(right); });
-    accessExpiration.value = account?.expirationDate || '';
-    accessExpiration.disabled = !account;
-  };
-
-  const renderAccessAssignment = () => {
+  const renderUserAccounts = () => {
     const activeAccounts = getStoredAccounts().filter(account => account.status === 'Active');
-    const selectedId = accessUserId.value;
+    userAccountCount.textContent = activeAccounts.length;
 
-    accessUserId.innerHTML = '<option value="">Select an active user</option>' + activeAccounts
-      .map(account => `<option value="${escapeHtml(account.userId)}">${escapeHtml(account.userId)} — ${escapeHtml(displayNameOf(account))} (${escapeHtml(account.department)})</option>`)
-      .join('');
-
-    accessUserId.value = activeAccounts.some(account => account.userId === selectedId) ? selectedId : '';
-    updateAccessRightsView();
+    userAccountRows.innerHTML = activeAccounts.length
+      ? activeAccounts.map(account => `
+          <tr>
+            <td>${escapeHtml(account.userId)}</td>
+            <td><strong>${escapeHtml(displayNameOf(account))}</strong></td>
+            <td>${escapeHtml(account.department)}</td>
+            <td>${escapeHtml(account.email)}</td>
+            <td>${escapeHtml(account.phone ? formatPhone(account.phone) : '—')}</td>
+            <td class="account-registered">${accountRegisteredLabel(account)}</td>
+          </tr>`).join('')
+      : '<tr><td class="empty-pending" colspan="6">No approved user accounts are stored yet.</td></tr>';
   };
+
+  const renderActiveAccountsPage = (query = '') => {
+    const needle = query.trim().toLowerCase();
+    const activeAccounts = getStoredAccounts().filter(account => account.status === 'Active');
+    const matches = activeAccounts.filter(account => !needle || accountSearchText(account).includes(needle));
+    activeAccountsPageCount.textContent = activeAccounts.length;
+    activeAccountsPageBody.innerHTML = matches.length
+      ? matches.map(account => `
+          <tr>
+            <td><strong>${escapeHtml(displayNameOf(account))}</strong><small>${escapeHtml(account.userId)} · ${escapeHtml(account.department || '—')}</small></td>
+            <td>${escapeHtml(account.email || '—')}</td>
+            <td>${escapeHtml(account.phone ? formatPhone(account.phone) : '—')}</td>
+            <td>${escapeHtml(account.gender || '—')}</td>
+            <td>${escapeHtml(birthdayLabelOf(account))}</td>
+            <td class="account-address-cell">${escapeHtml(fullAddressOf(account))}</td>
+          </tr>`).join('')
+      : '<tr><td class="empty-pending" colspan="6">No active accounts match your search.</td></tr>';
+  };
+
+  const manageAccountActionHtml = account => {
+    const id = escapeHtml(account.userId);
+    if (account.status === 'Active') {
+      return `<button class="reject-account" data-account-action="deactivate" data-user-id="${id}" type="button">Deactivate</button>`;
+    }
+    return `<button class="approve-account" data-account-action="activate" data-user-id="${id}" type="button">Reactivate</button>`;
+  };
+
+  const renderManageAccountsPage = (query = '') => {
+    const needle = query.trim().toLowerCase();
+    const manageableAccounts = getStoredAccounts().filter(account => ['Active', 'Inactive'].includes(account.status));
+    const matches = manageableAccounts.filter(account => !needle || `${accountSearchText(account)} ${account.status}`.toLowerCase().includes(needle));
+    manageAccountsPageCount.textContent = manageableAccounts.length;
+    manageAccountsPageBody.innerHTML = matches.length
+      ? matches.map(account => `
+          <tr>
+            <td><strong>${escapeHtml(displayNameOf(account))}</strong><small>${escapeHtml(account.userId)}</small></td>
+            <td>${escapeHtml(account.email || '—')}</td>
+            <td>${escapeHtml(account.phone ? formatPhone(account.phone) : '—')}</td>
+            <td>${escapeHtml(account.department || '—')}</td>
+            <td><span class="account-status ${account.status.toLowerCase()}">${escapeHtml(account.status)}</span></td>
+            <td><div class="account-actions">${manageAccountActionHtml(account)}</div></td>
+          </tr>`).join('')
+      : '<tr><td class="empty-pending" colspan="6">No active or deactivated accounts match your search.</td></tr>';
+  };
+
+  const openActiveAccountsPage = () => {
+    activeAccountsSearch.value = '';
+    renderActiveAccountsPage();
+    $('#adminPanel').hidden = true;
+    manageAccountsPage.hidden = true;
+    activeAccountsPage.hidden = false;
+    activeAccountsPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const openManageAccountsPage = () => {
+    manageAccountsSearch.value = '';
+    renderManageAccountsPage();
+    $('#adminPanel').hidden = true;
+    activeAccountsPage.hidden = true;
+    manageAccountsPage.hidden = false;
+    manageAccountsPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const showAdminPanel = () => {
+    activeAccountsPage.hidden = true;
+    manageAccountsPage.hidden = true;
+    $('#adminPanel').hidden = false;
+    renderPendingAccounts();
+    renderUserAccounts();
+  };
+
+  openViewAccounts.addEventListener('click', openActiveAccountsPage);
+  openManageAccounts.addEventListener('click', openManageAccountsPage);
+  backToAdminPanel.addEventListener('click', showAdminPanel);
+  backToAdminFromManage.addEventListener('click', showAdminPanel);
+  activeAccountsSearch.addEventListener('input', event => renderActiveAccountsPage(event.target.value));
+  manageAccountsSearch.addEventListener('input', event => renderManageAccountsPage(event.target.value));
+
+  const readPendingApprovalOptions = row => {
+    const rights = $$('[data-access-right]', row)
+      .filter(input => input.checked)
+      .map(input => input.dataset.accessRight);
+    const expirationDate = $('.pending-expiration', row)?.value || '';
+    return { rights, expirationDate };
+  };
+
+  const applyAccountAction = (accounts, account, action, options = {}) => {
+    if (action === 'approve' || action === 'activate') {
+      account.status = 'Active';
+      if (action === 'approve') {
+        account.accessRights = options.rights?.length ? options.rights : accessForDepartment(account.department);
+        account.expirationDate = options.expirationDate || '';
+        return `${displayNameOf(account)}'s account was approved and activated`;
+      }
+      return `${displayNameOf(account)}'s account was reactivated`;
+    }
+    if (action === 'reject' || action === 'deactivate') {
+      account.status = 'Inactive';
+      return action === 'reject'
+        ? `${displayNameOf(account)}'s account was rejected and marked inactive`
+        : `${displayNameOf(account)}'s account was deactivated`;
+    }
+    if (action === 'remove') {
+      const index = accounts.indexOf(account);
+      if (index !== -1) accounts.splice(index, 1);
+      [MOBILE_TODAY_KEY_PREFIX, MOBILE_POSTS_KEY_PREFIX].forEach(prefix => {
+        try { localStorage.removeItem(prefix + account.userId); } catch { /* private mode */ }
+      });
+      return `${displayNameOf(account)}'s account was removed`;
+    }
+    return '';
+  };
+
+  const refreshAccountsViews = () => {
+    renderPendingAccounts();
+    renderUserAccounts();
+    renderActiveAccountsPage(activeAccountsPage.hidden ? '' : activeAccountsSearch.value);
+    renderManageAccountsPage(manageAccountsPage.hidden ? '' : manageAccountsSearch.value);
+    updateSystemCounts();
+  };
+
+  const handleAccountAction = event => {
+    const button = event.target.closest('[data-account-action]');
+    if (!button) return;
+
+    const accounts = getStoredAccounts();
+    const account = accounts.find(item => item.userId === button.dataset.userId);
+    if (!account) return;
+
+    const row = button.closest('tr');
+    const options = button.dataset.accountAction === 'approve' && row ? readPendingApprovalOptions(row) : {};
+    if (options.expirationDate && options.expirationDate < today()) {
+      return toast('Choose today or a future expiration date');
+    }
+
+    const message = applyAccountAction(accounts, account, button.dataset.accountAction, options);
+    saveStoredAccounts(accounts);
+    refreshAccountsViews();
+    if (message) toast(message);
+  };
+
 
   /* --- registered guard directory (demo guards + approved accounts) --- */
 
@@ -1489,6 +1677,8 @@ function initWorkspace(toast, profiles) {
 
   const setPanel = panel => {
     $('#employeeDirectoryPage').hidden = true;
+    $('#activeAccountsPage').hidden = true;
+    $('#manageAccountsPage').hidden = true;
     document.body.classList.remove(...bodyClasses);
     if (panel !== 'attendance') document.body.classList.add(`${panel}-panel-active`);
 
@@ -1501,7 +1691,7 @@ function initWorkspace(toast, profiles) {
     if (panel === 'hr') renderGuardDirectory();
     if (panel === 'admin') {
       renderPendingAccounts();
-      renderAccessAssignment();
+      renderUserAccounts();
     }
   };
 
@@ -1575,45 +1765,11 @@ function initWorkspace(toast, profiles) {
   $('#reviewExceptions').addEventListener('click', () => openAction('exceptions'));
   $('#exportAnalytics').addEventListener('click', () => toast('Analytics summary is ready to export'));
 
-  /* --- approve / reject account requests --- */
+  /* --- approve / reject / activate / deactivate / remove accounts --- */
 
-  pendingAccountRows.addEventListener('click', event => {
-    const button = event.target.closest('[data-account-action]');
-    if (!button) return;
-
-    const accounts = getStoredAccounts();
-    const account = accounts.find(item => item.userId === button.dataset.userId);
-    if (!account) return;
-
-    const approved = button.dataset.accountAction === 'approve';
-    account.status = approved ? 'Active' : 'Inactive';
-    if (approved) account.accessRights = accessForDepartment(account.department);
-
-    saveStoredAccounts(accounts);
-    renderPendingAccounts();
-    renderAccessAssignment();
-    updateSystemCounts();
-    toast(`${displayNameOf(account)}'s account was ${approved ? 'approved and activated' : 'rejected and marked inactive'}`);
-  });
-
-  accessUserId.addEventListener('change', updateAccessRightsView);
-
-  accessAssignmentForm.addEventListener('submit', event => {
-    event.preventDefault();
-
-    const accounts = getStoredAccounts();
-    const account = accounts.find(item => item.userId === accessUserId.value && item.status === 'Active');
-    if (!account) return toast('Select an active user first');
-    if (accessExpiration.value && accessExpiration.value < today()) {
-      return toast('Choose today or a future expiration date');
-    }
-
-    account.accessRights = accessForDepartment(account.department);
-    account.expirationDate = accessExpiration.value;
-    saveStoredAccounts(accounts);
-    updateAccessRightsView();
-    toast(`${displayNameOf(account)}'s department access and expiration date were saved`);
-  });
+  pendingAccountRows.addEventListener('click', handleAccountAction);
+  userAccountRows.addEventListener('click', handleAccountAction);
+  manageAccountsPageBody.addEventListener('click', handleAccountAction);
 
   /* --- dialog closing and mock submissions --- */
 

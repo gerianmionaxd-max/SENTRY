@@ -524,17 +524,17 @@
         </article>
       </div>
 
-      <article class="pending-accounts-card">
+      <article class="pending-accounts-card pending-access-card">
         <div class="pending-accounts-head">
           <div>
-            <p class="eyebrow">ACCOUNT MANAGEMENT</p>
+            <p class="eyebrow">ACCOUNT MANAGEMENT &amp; ACCESS ASSIGNMENT</p>
             <h2>Pending account requests <span id="pendingAccountCount">0</span></h2>
-            <p>Approve staff accounts before they can access the system.</p>
+            <p>Review pending staff accounts, set access rights, add an optional expiration date, then approve or reject.</p>
           </div>
         </div>
 
         <div class="pending-table-wrap">
-          <table class="pending-accounts-table">
+          <table class="pending-accounts-table pending-access-table">
             <thead>
               <tr>
                 <th>USER ID</th>
@@ -542,44 +542,14 @@
                 <th>EMAIL</th>
                 <th>DEPARTMENT</th>
                 <th>STATUS</th>
+                <th>ACCESS RIGHTS</th>
+                <th>EXPIRATION</th>
                 <th>ACTIONS</th>
               </tr>
             </thead>
             <tbody id="pendingAccountRows"></tbody>
           </table>
         </div>
-      </article>
-
-      <article class="access-assignment-card">
-        <div>
-          <p class="eyebrow">ROLE &amp; ACCESS ASSIGNMENT</p>
-          <h2>Department-based access</h2>
-          <p>Access rights are assigned automatically when an account is approved.</p>
-        </div>
-
-        <form id="accessAssignmentForm" class="access-assignment-form">
-          <label>User ID
-            <select id="accessUserId" required>
-              <option value="" selected>Select an active user</option>
-            </select>
-          </label>
-
-          <fieldset>
-            <legend>Access rights</legend>
-            <div class="assignment-rights">
-              <label><input id="accessRead" type="checkbox" disabled> Read</label>
-              <label><input id="accessWrite" type="checkbox" disabled> Write</label>
-              <label><input id="accessExecute" type="checkbox" disabled> Execute</label>
-              <label><input id="accessAdmin" type="checkbox" disabled> Admin</label>
-            </div>
-          </fieldset>
-
-          <label>Expiration date <span>Optional</span>
-            <input id="accessExpiration" type="date">
-          </label>
-
-          <button class="hr-primary" type="submit">Save expiration date</button>
-        </form>
       </article>
 
       <div class="analytics-grid">
@@ -605,13 +575,89 @@
           <button class="hr-link" id="reviewExceptions" type="button">Review exceptions →</button>
         </article>
 
-        <article class="analytics-card activity-card">
-          <h2>Recent activity</h2>
-          <p>Latest system events</p>
-          <div class="activity-row"><b>QR time-in verified</b><span>Ramon Santos · 06:42 AM</span></div>
-          <div class="activity-row"><b>Attendance correction requested</b><span>Leo Jimenez · 07:41 AM</span></div>
-          <div class="activity-row"><b>Payroll report generated</b><span>Aug 1–15 period · 08:15 AM</span></div>
+        <article class="analytics-card user-accounts-card">
+          <div class="accounts-head">
+            <div>
+              <p class="eyebrow">ACCOUNT STORAGE</p>
+              <h2>Registered user accounts <span id="userAccountCount">0</span></h2>
+              <p>Approved/active account records stored on this device.</p>
+            </div>
+            <div class="account-storage-actions">
+              <button class="hr-primary" id="openViewAccounts" type="button">View Accounts</button>
+              <button class="hr-primary secondary" id="openManageAccounts" type="button">Manage Accounts</button>
+            </div>
+          </div>
+
+          <div class="pending-table-wrap">
+            <table class="pending-accounts-table active-accounts-preview-table">
+              <thead>
+                <tr>
+                  <th>USER ID</th>
+                  <th>NAME</th>
+                  <th>DEPARTMENT</th>
+                  <th>EMAIL</th>
+                  <th>CONTACT</th>
+                  <th>REGISTERED</th>
+                </tr>
+              </thead>
+              <tbody id="userAccountRows"></tbody>
+            </table>
+          </div>
         </article>
+      </div>
+    </section>
+
+    <section class="guard-directory active-accounts-page" id="activeAccountsPage" hidden aria-label="Active account directory">
+      <div class="directory-head">
+        <div>
+          <button class="hr-back-link" id="backToAdminPanel" type="button">← Back to Admin Analytics</button>
+          <h2>Active account directory <span id="activeAccountsPageCount">0</span></h2>
+          <p>Complete registration details for approved user accounts only.</p>
+        </div>
+        <div class="directory-search">⌕ <input id="activeAccountsSearch" placeholder="Search name, ID, email or department"></div>
+      </div>
+
+      <div class="directory-table-wrap">
+        <table class="directory-table active-accounts-detail-table">
+          <thead>
+            <tr>
+              <th>USER</th>
+              <th>EMAIL</th>
+              <th>CONTACT NUMBER</th>
+              <th>GENDER</th>
+              <th>BIRTHDAY</th>
+              <th>ADDRESS</th>
+            </tr>
+          </thead>
+          <tbody id="activeAccountsPageBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="guard-directory active-accounts-page" id="manageAccountsPage" hidden aria-label="Manage active and inactive accounts">
+      <div class="directory-head">
+        <div>
+          <button class="hr-back-link" id="backToAdminFromManage" type="button">← Back to Admin Analytics</button>
+          <h2>Manage accounts <span id="manageAccountsPageCount">0</span></h2>
+          <p>View active and deactivated accounts, then deactivate or reactivate access.</p>
+        </div>
+        <div class="directory-search">⌕ <input id="manageAccountsSearch" placeholder="Search name, ID, email or status"></div>
+      </div>
+
+      <div class="directory-table-wrap">
+        <table class="directory-table manage-accounts-table">
+          <thead>
+            <tr>
+              <th>USER</th>
+              <th>EMAIL</th>
+              <th>CONTACT NUMBER</th>
+              <th>DEPARTMENT</th>
+              <th>STATUS</th>
+              <th>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody id="manageAccountsPageBody"></tbody>
+        </table>
       </div>
     </section>
 
@@ -973,5 +1019,5 @@
   <div class="toast" id="toast">QR scanner is ready to launch</div>
 
   <script src="script.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3cd5af1ae8aef7b',t:'MTc4OTcwMzA5OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3ce26c75acb5c88',t:'MTc4OTcxMTQ0OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

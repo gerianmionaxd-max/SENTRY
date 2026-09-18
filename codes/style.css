@@ -1852,21 +1852,91 @@ body.admin-panel-active .admin-panel:not([hidden]) {
     background:#df6471;
 }
 
-.activity-card {
+/* User account storage — replaces the recent-activity feed */
+.user-accounts-card {
     grid-column:1 / -1;
 }
 
-.activity-row {
+.accounts-head {
     display:flex;
     justify-content:space-between;
-    padding:12px 0;
-    border-bottom:1px solid #edf0f5;
-    font-size:12px;
+    align-items:flex-end;
+    gap:16px;
+    flex-wrap:wrap;
 }
 
-.activity-row span {
+.accounts-head h2 span {
+    display:inline-grid;
+    min-width:21px;
+    height:21px;
+    place-items:center;
+    border-radius:50%;
+    color:#315ce9;
+    background:#eef2ff;
+    font:800 11px 'DM Sans';
+    vertical-align:2px;
+}
+
+.account-filter {
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+}
+
+.account-filter button {
+    border:1px solid #e2e7f0;
+    border-radius:999px;
+    padding:6px 12px;
+    background:#fff;
+    color:#667289;
+    font:600 11px 'DM Sans';
+    cursor:pointer;
+}
+
+.account-filter button:hover {
+    border-color:#315ce9;
+    color:#315ce9;
+}
+
+.account-filter button.active {
+    color:#315ce9;
+    background:#f0f3ff;
+    border-color:#315ce9;
+}
+
+.account-status {
+    display:inline-block;
+    padding:4px 9px;
+    border-radius:999px;
+    font-size:10px;
+    font-weight:700;
+    white-space:nowrap;
+}
+
+.account-status.active {
+    color:#21835d;
+    background:#e7f6ef;
+}
+
+.account-status.pending {
+    color:#a56a0a;
+    background:#fff4dc;
+}
+
+.account-status.inactive {
+    color:#c04d5a;
+    background:#fff0f2;
+}
+
+.account-registered {
     color:#7d879b;
     font-size:11px;
+    white-space:nowrap;
+}
+
+.remove-account {
+    color:#c04d5a;
+    background:#fff0f2;
 }
 
 
@@ -2492,10 +2562,6 @@ body.admin-panel-active .admin-panel:not([hidden]) {
         grid-template-columns:1fr;
     }
 
-    .activity-card {
-        grid-column:auto;
-    }
-
     .hr-overview {
         grid-template-columns:repeat(2,1fr);
     }
@@ -2620,15 +2686,6 @@ body.admin-panel-active .admin-panel:not([hidden]) {
 
     .directory-search {
         min-width:0;
-    }
-
-    .activity-row {
-        display:block;
-    }
-
-    .activity-row span {
-        display:block;
-        margin-top:3px;
     }
 
     /* Sign-in screen stacks brand above the form */
@@ -2812,4 +2869,211 @@ body.admin-panel-active .admin-panel:not([hidden]) {
     .field-row.split-60-40 {
         grid-template-columns:1fr;
     }
+}
+
+/* Admin pending approvals now include access assignment inline */
+.pending-access-table {
+    min-width:1120px;
+}
+
+.pending-rights {
+    display:grid;
+    grid-template-columns:repeat(2, minmax(72px, 1fr));
+    gap:6px 10px;
+    color:#66738b;
+    font-size:11px;
+}
+
+.pending-rights label {
+    display:flex;
+    align-items:center;
+    gap:5px;
+    white-space:nowrap;
+}
+
+.pending-rights input {
+    accent-color:#315ce9;
+}
+
+.pending-expiration {
+    width:142px;
+    padding:8px 9px;
+    border:1px solid #dce3ef;
+    border-radius:7px;
+    background:#fff;
+    color:#202c49;
+    font:12px 'DM Sans';
+}
+
+.pending-expiration:focus {
+    outline:2px solid #315ce933;
+    border-color:#315ce9;
+}
+
+.account-directory-link {
+    padding:8px 0 0;
+    white-space:nowrap;
+}
+
+.active-accounts-preview-table {
+    min-width:820px;
+}
+
+.active-accounts-page {
+    margin-top:42px;
+}
+
+.active-accounts-detail-table {
+    min-width:1050px;
+}
+
+.active-accounts-detail-table td {
+    vertical-align:top;
+}
+
+.account-address-cell {
+    min-width:260px;
+    line-height:1.45;
+    white-space:normal;
+}
+
+@media (max-width:900px) {
+    .pending-rights {
+        grid-template-columns:1fr;
+    }
+
+    .pending-expiration {
+        width:130px;
+    }
+}
+
+/* Account storage buttons: View Accounts + Manage Accounts */
+.account-storage-actions {
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.hr-primary.secondary {
+    color:#315ce9;
+    background:#eef2ff;
+    border:1px solid #c9d8ff;
+}
+
+.hr-primary.secondary:hover {
+    background:#e4ebff;
+}
+
+.manage-accounts-table {
+    min-width:760px;
+}
+
+/* Manage accounts table refinement */
+.manage-accounts-table th,
+.manage-accounts-table td {
+    text-align:center;
+    vertical-align:middle;
+}
+
+.manage-accounts-table td strong,
+.manage-accounts-table td small {
+    text-align:center;
+}
+
+.manage-accounts-table .account-actions {
+    justify-content:center;
+}
+
+/* Make the Admin directory back links look like real buttons */
+.active-accounts-page .hr-back-link {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    margin-bottom:12px;
+    padding:8px 13px;
+    border:1px solid #c9d8ff;
+    border-radius:999px;
+    background:#eef2ff;
+    color:#315ce9;
+    font:800 11px 'DM Sans';
+    text-decoration:none;
+    transition:background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.active-accounts-page .hr-back-link:hover {
+    background:#e4ebff;
+    border-color:#315ce9;
+    box-shadow:0 6px 16px #315ce91c;
+    text-decoration:none;
+    transform:translateY(-1px);
+}
+
+.active-accounts-page .hr-back-link:active {
+    transform:translateY(0) scale(.98);
+    box-shadow:0 2px 8px #315ce91a;
+}
+
+/* Smooth action-button feedback for deactivate/reactivate and account actions */
+.account-actions button {
+    transition:background .18s ease, color .18s ease, box-shadow .18s ease, transform .16s ease, filter .18s ease;
+}
+
+.account-actions button:hover {
+    transform:translateY(-1px);
+    box-shadow:0 6px 14px #202c4914;
+    filter:saturate(1.05);
+}
+
+.account-actions button:active {
+    transform:translateY(0) scale(.96);
+    box-shadow:0 2px 6px #202c4912;
+}
+
+.account-actions button:focus-visible {
+    outline:2px solid #315ce9;
+    outline-offset:2px;
+}
+
+/* HR employee directory navigation buttons */
+#openEmployeeDirectory,
+#backToHrWorkspace {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    width:auto;
+    margin-top:10px;
+    padding:8px 13px;
+    border:1px solid #c9d8ff;
+    border-radius:999px;
+    background:#eef2ff;
+    color:#315ce9;
+    font:800 11px 'DM Sans';
+    text-decoration:none;
+    cursor:pointer;
+    transition:background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+#openEmployeeDirectory:hover,
+#backToHrWorkspace:hover {
+    background:#e4ebff;
+    border-color:#315ce9;
+    box-shadow:0 6px 16px #315ce91c;
+    text-decoration:none;
+    transform:translateY(-1px);
+}
+
+#openEmployeeDirectory:active,
+#backToHrWorkspace:active {
+    transform:translateY(0) scale(.98);
+    box-shadow:0 2px 8px #315ce91a;
+}
+
+#openEmployeeDirectory:focus-visible,
+#backToHrWorkspace:focus-visible {
+    outline:2px solid #315ce9;
+    outline-offset:2px;
 }

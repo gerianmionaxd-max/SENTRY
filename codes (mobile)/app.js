@@ -184,6 +184,36 @@ function currentPostLabel() {
   return [guard.post, guard.assignment].filter(Boolean).join(' · ') || 'Not yet assigned';
 }
 
+function postHistoryKey() {
+  return `sentryGuardPosts_${guard.userId}`;
+}
+
+function readPostHistory() {
+  try {
+    const list = JSON.parse(localStorage.getItem(postHistoryKey()) || '[]');
+    return Array.isArray(list) ? list : [];
+  } catch { return []; }
+}
+
+/* Snapshot today's post so past record cards keep the post they had */
+function snapshotTodayPost() {
+  if (!guard) return;
+  const key = todayKey();
+  const history = readPostHistory().filter(entry => entry.key !== key);
+  history.push({ key, post: guard.post || '', assignment: guard.assignment || '' });
+  try {
+    localStorage.setItem(postHistoryKey(), JSON.stringify(history.slice(-60)));
+  } catch { /* storage blocked: records fall back gracefully */ }
+}
+
+/* The post a given day had: snapshot wins, today falls back to the live
+   post, pre-feature days honestly show an em dash */
+function postLabelFor(dayKey) {
+  const snap = readPostHistory().find(entry => entry.key === dayKey);
+  if (snap) return [snap.post, snap.assignment].filter(Boolean).join(' · ') || 'Not yet assigned';
+  return dayKey === todayKey() ? currentPostLabel() : '—';
+}
+
 /* Re-read our account after HR edits it elsewhere: storage events fire
    live from other tabs, visibility changes cover coming back to this one */
 function refreshAccount() {
@@ -192,6 +222,7 @@ function refreshAccount() {
   if (!fresh || fresh.status !== 'Active') return;
   const before = currentPostLabel();
   guard = fresh;
+  snapshotTodayPost();
   const after = currentPostLabel();
   applyIdentity();
   renderAll();
@@ -234,11 +265,12 @@ function applyIdentity() {
 function enterApp() {
   weekCache = null;
   todayState = readToday();
+  snapshotTodayPost();
   applyIdentity();
   $('#tabbar').hidden = false;
   showView('home');
   renderAll();
-  startQrLoop();
+  initQrState();
 }
 
 function initAuth() {
@@ -315,7 +347,7 @@ function todayStatus() {
   return { title: 'Not timed in', pill: '● Off duty', mode: '' };
 }
 
-function recordRow(dateLabel, timeIn, timeOut, status, highlight = false) {
+function recordRow(dateLabel, timeIn, timeOut, status, highlight = false, postLabel = '') {
   const hours = (timeIn !== '—' && timeOut !== '—') ? '8h 00m' : '—';
   return `
     <article class="record-card${highlight ? ' today' : ''}">
@@ -328,7 +360,7 @@ function recordRow(dateLabel, timeIn, timeOut, status, highlight = false) {
         <div><span>TIME OUT</span><b>${timeOut}</b></div>
         <div><span>HOURS</span><b>${hours}</b></div>
       </div>
-      <div class="record-post"><span>POST</span><b>${currentPostLabel()}</b></div>
+      <div class="record-post"><span>POST</span><b>${postLabel}</b></div>
     </article>`;
 }
 
@@ -410,12 +442,12 @@ function renderRecords() {
   const status = todayState.in
     ? (minutesOf(todayState.in) > SHIFT_START_MINUTES ? 'late' : 'present')
     : 'today';
-  cards.push(recordRow(`Today · ${formatDay(now)}`, inLabel, outLabel, status, true));
+  cards.push(recordRow(`Today · ${formatDay(now)}`, inLabel, outLabel, status, true, postLabelFor(todayKey())));
 
   pastWeek().forEach(([ago, timeIn, timeOut, recordStatus]) => {
     const date = new Date();
     date.setDate(date.getDate() - ago);
-    cards.push(recordRow(formatDay(date), timeIn || '—', timeOut || '—', recordStatus));
+    cards.push(recordRow(formatDay(date), timeIn || '—', timeOut || '—', recordStatus, false, postLabelFor(todayKey(date))));
   });
   $('#recordList').innerHTML = cards.join('');
 
@@ -507,6 +539,22 @@ function tickQr() {
   $('.qr-count').classList.toggle('urgent', seconds <= 6);
 }
 
+/* Day already completed (e.g. returning after time-out): show the success
+   state instead of generating a code nobody can scan */
+function initQrState() {
+  if (todayState.out) {
+    qrToken = todayState.token || newToken();
+    qrDeadline = Date.now();
+    $('#qrToken').textContent = qrToken;
+    drawQr();
+    stopQrLoop();
+    setScannedUI(true, `Time-out recorded · ${formatTime(new Date(todayState.out))}`);
+    $('#newCodeBtn').hidden = true;
+  } else {
+    startQrLoop();
+  }
+}
+
 function startQrLoop() {
   stopQrLoop();
   setScannedUI(false);
@@ -527,6 +575,7 @@ function initScannerDemo() {
 
     if (!todayState.in) {
       todayState.in = now.toISOString();
+      todayState.token = qrToken;
       const late = minutesOf(todayState.in) > SHIFT_START_MINUTES;
       saveToday();
       renderHome();
@@ -536,11 +585,13 @@ function initScannerDemo() {
       toast(late ? 'Late time-in recorded by personnel.' : 'Time-in recorded by personnel.');
     } else if (!todayState.out) {
       todayState.out = now.toISOString();
+      todayState.token = qrToken;
       saveToday();
       renderHome();
       renderRecords();
       stopQrLoop();
       setScannedUI(true, `Time-out recorded · ${formatTime(now)}`);
+      $('#newCodeBtn').hidden = true;
       toast('Time-out recorded by personnel. Good work today!');
     } else {
       toast('Attendance already completed for today.');
