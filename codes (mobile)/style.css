@@ -156,6 +156,20 @@ body {
     display:block;
 }
 
+#view-profile {
+    animation:none;
+    padding-bottom:150px;
+}
+
+#logoutBtn {
+    position:absolute;
+    left:20px;
+    right:20px;
+    bottom:86px;
+    z-index:5;
+    width:auto;
+}
+
 @keyframes rise {
     from { opacity:0; transform:translateY(10px); }
 }
@@ -462,6 +476,30 @@ body {
     padding:12px;
     border-radius:14px;
     background:#ffffff1c;
+}
+
+.status-post {
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:8px;
+    margin-top:12px;
+    padding:10px 12px;
+    border-radius:12px;
+    background:#ffffff1c;
+}
+
+.status-post span {
+    flex:none;
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:1px;
+    opacity:.75;
+}
+
+.status-post b {
+    text-align:right;
+    font:800 12px Manrope,system-ui,sans-serif;
 }
 
 .status-times span {
@@ -867,6 +905,29 @@ body {
     font:800 13px Manrope,system-ui,sans-serif;
 }
 
+.record-post {
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:8px;
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px dashed var(--line);
+}
+
+.record-post span {
+    flex:none;
+    color:#9aa4b8;
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:1px;
+}
+
+.record-post b {
+    text-align:right;
+    font-size:11px;
+}
+
 .record-times {
     display:grid;
     grid-template-columns:1fr 1fr 1fr;
@@ -1011,10 +1072,21 @@ body {
     cursor:pointer;
 }
 
-.tabbar button svg {
+.tabbar button img {
     width:23px;
     height:23px;
-    fill:currentColor;
+    opacity:.45;
+}
+
+.tabbar button.active img {
+    opacity:1;
+    filter:invert(31%) sepia(88%) saturate(2878%) hue-rotate(214deg) brightness(97%) contrast(96%);
+}
+
+.quick-icon img {
+    width:22px;
+    height:22px;
+    filter:invert(31%) sepia(88%) saturate(2878%) hue-rotate(214deg) brightness(97%) contrast(96%);
 }
 
 .tabbar button span {
@@ -1042,7 +1114,7 @@ body {
     position:absolute;
     left:20px;
     right:20px;
-    bottom:104px;
+    bottom:150px;
     z-index:6;
     padding:13px 16px;
     border-radius:14px;

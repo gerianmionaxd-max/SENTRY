@@ -1100,12 +1100,35 @@ td small {
     align-items:center;
     width:100%;
     gap:12px;
-    padding:15px 0;
-    border:0;
-    border-bottom:1px solid #edf0f5;
-    background:none;
+    margin-top:10px;
+    padding:14px 16px;
+    border:1px solid #edf0f5;
+    border-radius:12px;
+    background:#fff;
     text-align:left;
     cursor:pointer;
+    transition:background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.hr-task-list button:hover {
+    background:#f4f7ff;
+    border-color:#c9d8ff;
+    box-shadow:0 8px 20px #315ce926;
+    transform:translateX(4px);
+}
+
+.hr-task-list button:hover .task-icon {
+    transform:scale(1.1);
+}
+
+.hr-task-list button:active {
+    transform:translateX(2px);
+    box-shadow:0 3px 10px #315ce91f;
+}
+
+.hr-task-list button:focus-visible {
+    outline:2px solid #315ce9;
+    outline-offset:2px;
 }
 
 .task-icon {
@@ -1116,6 +1139,21 @@ td small {
     place-items:center;
     border-radius:9px;
     font-weight:800;
+    transition:transform .18s ease;
+}
+
+.hr-back-link {
+    margin-bottom:6px;
+    padding:0;
+    border:0;
+    background:none;
+    color:#315ce9;
+    font:700 12px Manrope;
+    cursor:pointer;
+}
+
+.hr-back-link:hover {
+    text-decoration:underline;
 }
 
 .task-icon.blue {
@@ -1131,6 +1169,12 @@ td small {
 .task-icon.violet {
     color:#7659df;
     background:#f1edff;
+}
+
+.task-icon img {
+    display:block;
+    width:20px;
+    height:20px;
 }
 
 .hr-task-list strong,
@@ -1230,10 +1274,10 @@ body.admin-panel-active .content-grid {
     display:none;
 }
 
-body.hr-panel-active .hr-panel,
-body.hr-panel-active .guard-directory,
-body.payroll-panel-active .payroll-panel,
-body.admin-panel-active .admin-panel {
+body.hr-panel-active .hr-panel:not([hidden]),
+body.hr-panel-active .guard-directory:not([hidden]),
+body.payroll-panel-active .payroll-panel:not([hidden]),
+body.admin-panel-active .admin-panel:not([hidden]) {
     display:block;
 }
 
@@ -1252,6 +1296,19 @@ body.admin-panel-active .admin-panel {
     justify-content:space-between;
     gap:16px;
     margin-bottom:18px;
+}
+
+.directory-head-actions {
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    flex-wrap:wrap;
+    gap:10px;
+}
+
+.directory-head-actions .hr-primary {
+    padding:10px 16px;
+    white-space:nowrap;
 }
 
 .directory-head h2 {
@@ -1392,40 +1449,99 @@ body.admin-panel-active .admin-panel {
     cursor:pointer;
 }
 
-.post-assign-btn {
-    display:inline-block;
-    margin-top:6px;
-    padding:4px 12px;
-    border:1px solid #cfdaf5;
-    border-radius:999px;
-    background:#eef3ff;
-    color:#315ce9;
-    font:700 11px Manrope;
+
+.hr-report-dialog {
+    width:min(100%,760px);
+}
+
+.hr-report-bar {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin:4px 0 12px;
+}
+
+.hr-report-bar p {
+    margin:0;
+    color:#7d879b;
+    font-size:12px;
+}
+
+.hr-report-print {
+    flex:none;
+    border:0;
+    border-radius:7px;
+    padding:9px 16px;
+    background:#315ce9;
+    color:#fff;
+    font:700 12px 'DM Sans';
     cursor:pointer;
+    white-space:nowrap;
 }
 
-.post-assign-btn:hover {
-    background:#dce7ff;
+.hr-report-print:hover {
+    background:#2549c4;
 }
 
-.post-assign-error {
+.hr-report-table-wrap {
+    overflow:auto;
+    max-height:50vh;
+    border:1px solid #edf0f5;
+    border-radius:10px;
+}
+
+.hr-report-table {
+    width:100%;
+    border-collapse:collapse;
+    font-size:12px;
+}
+
+.hr-report-table th {
+    position:sticky;
+    top:0;
+    background:#f6f8fc;
+    color:#7d879b;
+    font-size:10px;
+    letter-spacing:1px;
+    text-align:left;
+    padding:9px 10px;
+}
+
+.hr-report-table td {
+    padding:9px 10px;
+    border-top:1px solid #edf0f5;
+}
+
+.personnel-search {
+    margin:10px 0 8px;
+}
+
+.personnel-error {
+    margin:0 0 8px;
     color:#c04d5a;
     font-size:12px;
 }
 
-.post-assign-buttons {
-    display:flex;
-    gap:10px;
+.personnel-none {
+    color:#7d879b;
 }
 
-.post-assign-buttons button {
-    flex:1;
+.hr-report-table small {
+    color:#7d879b;
 }
 
-.post-assign-buttons .post-assign-cancel {
-    background:#eef1f6;
-    color:#536077;
+.personnel-location,
+.personnel-detail {
+    width:100%;
+    min-width:130px;
+    padding:8px;
+    border:1px solid #dce3ef;
+    border-radius:7px;
+    background:#fff;
+    font:12px 'DM Sans';
 }
+
 
 .hr-record-list {
     display:grid;

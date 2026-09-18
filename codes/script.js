@@ -57,7 +57,7 @@ const PAYROLL_ACTIONS = {
 /* Demo record sets rendered inside the HR / payroll tool dialogs */
 const HR_ACTION_RECORDS = {
   exceptions: [
-    ['Leo Jimenez', 'Late arrival · 07:03 AM'],
+    ['Leo Jimenez', 'Late arrival · 07:41 AM'],
     ['Kevin Silva', 'No QR scan recorded · Absent'],
   ],
   schedule: [
@@ -860,13 +860,22 @@ function updateSystemCounts() {
   setText('#verifiedStat', verified);
   setText('#verifiedRing', verified);
 
+  const todayRecords = collectTodayAttendance();
+  const flaggedToday = todayRecords.filter(record => record.exception);
+  const lateToday = flaggedToday.filter(record => primaryIssueOf(record) === 'late').length;
+  const missedToday = flaggedToday.filter(record => primaryIssueOf(record) === 'missed').length;
+  const absentToday = flaggedToday.filter(record => primaryIssueOf(record) === 'absent').length;
+  const issueParts = [];
+  if (lateToday) issueParts.push(`${lateToday} late`);
+  if (missedToday) issueParts.push(`${missedToday} missed`);
+  if (absentToday) issueParts.push(`${absentToday} absent`);
+  const exceptionNote = issueParts.length ? issueParts.join(' · ') : 'No exceptions';
+
   /* HR panel */
   setText('#hrRegisteredGuardCount', Object.keys(GUARDS).length + activeAccounts);
-  setText('#hrExceptionCount', exceptions);
-  setText('#hrExceptionNote', `${late} late · ${absent} absent today`);
+  setText('#hrExceptionCount', flaggedToday.length);
+  setText('#hrExceptionNote', `${exceptionNote} today`);
   setText('#hrPendingAccountCount', pendingAccounts);
-  setText('#hrAttendanceRecordCount', total);
-  setText('#hrExceptionTaskCount', exceptions);
 
   /* Payroll panel */
   setText('#payrollValidatedCount', verified);
@@ -876,11 +885,183 @@ function updateSystemCounts() {
   setText('#adminAttendanceRate', `${Math.round((onDuty / total) * 100)}%`);
   setText('#adminOnDutyCount', onDuty);
   setText('#adminCoverageNote', `Of ${total} current guards`);
-  setText('#adminExceptionCount', exceptions);
-  setText('#adminExceptionNote', `${late} late · ${absent} absent`);
+  setText('#adminExceptionCount', flaggedToday.length);
+  setText('#adminExceptionNote', exceptionNote);
   setText('#adminVerificationRate', `${Math.round((verified / total) * 100)}%`);
-  setText('#adminLateCount', late);
-  setText('#adminAbsentCount', absent);
+  setText('#adminLateCount', lateToday);
+  setText('#adminAbsentCount', absentToday);
+}
+
+
+/* Fixed post locations HR can assign guards to */
+const POST_LOCATIONS = [
+  'Trinitarian Centre',
+  'Trinitarian Complex',
+  'Macario-Catalina Building',
+  'Triplex Grounds (Gate 1)',
+  'Triplex Grounds (Gate 2)',
+  'JTA Building',
+  'SMO Office',
+  'STVET Training Center',
+  'Elementary Building',
+  'Wildcats Gym',
+  'GoodHoly Arcade',
+];
+
+/* Any PH mobile shape (+639…, 09…, spaced or not) -> +63 917 555 0156 */
+function formatPhone(phone) {
+  const digits = (phone || '').replace(/\D/g, '');
+  let local = digits;
+  if (digits.length === 12 && digits.startsWith('63')) local = digits.slice(2);
+  else if (digits.length === 11 && digits.startsWith('0')) local = digits.slice(1);
+  if (/^9\d{9}$/.test(local)) return `+63 ${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6)}`;
+  return phone || '';
+}
+
+
+/* ------------------------------------------------------------------
+   Today's attendance: demo board rows + live mobile QR states.
+   Day shift starts at 7:00 AM; time-ins after 7:30 AM count as late.
+------------------------------------------------------------------ */
+
+const SHIFT_START_MINUTES = 7 * 60;
+const LATE_GRACE_MINUTES = 30;
+
+/* Same day-key format the mobile app stamps its QR states with */
+function todayKeyLocal(date = new Date()) {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+function timeLabelOf(date) {
+  let hours = date.getHours();
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return `${String(hours).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')} ${suffix}`;
+}
+
+function minutesOfDay(date) {
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+/* One record per guard for today, whether they scanned or not */
+function collectTodayAttendance() {
+  const records = [];
+  const today = todayKeyLocal();
+
+  /* Demo guards come from the attendance board (single source of truth) */
+  $$('#attendanceRows tr').forEach(row => {
+    const timeCell = row.cells[2];
+    const inLabel = timeCell.querySelector('strong')?.textContent.trim() || '';
+    const outMatch = /Out:\s*([0-9]{1,2}:[0-9]{2}\s*[AP]M)/i.exec(timeCell.querySelector('small')?.textContent || '');
+    const scannedIn = /^[0-9]{1,2}:[0-9]{2}\s*[AP]M$/i.test(inLabel);
+    records.push({
+      name: row.querySelector('.person strong')?.textContent.trim() || '',
+      id: row.dataset.qr || row.querySelector('.person small')?.textContent.trim() || '',
+      timeIn: scannedIn ? inLabel.toUpperCase() : '',
+      timeOut: outMatch ? outMatch[1].toUpperCase() : '',
+      late: row.dataset.status === 'late',
+      absent: row.dataset.status === 'absent',
+    });
+  });
+
+  /* Staff guards come from their live mobile QR states (same browser store) */
+  getStoredAccounts()
+    .filter(account => account.status === 'Active' && account.department === 'Security')
+    .forEach(account => {
+      let state = null;
+      try {
+        state = JSON.parse(localStorage.getItem(MOBILE_TODAY_KEY_PREFIX + account.userId) || 'null');
+      } catch { state = null; }
+      const fresh = state && state.key === today;
+      const inDate = fresh && state.in ? new Date(state.in) : null;
+      const outDate = fresh && state.out ? new Date(state.out) : null;
+      const validIn = inDate && !Number.isNaN(inDate.getTime());
+      const validOut = outDate && !Number.isNaN(outDate.getTime());
+      records.push({
+        name: displayNameOf(account),
+        id: account.userId,
+        timeIn: validIn ? timeLabelOf(inDate) : '',
+        timeOut: validOut ? timeLabelOf(outDate) : '',
+        late: !!validIn && minutesOfDay(inDate) > SHIFT_START_MINUTES + LATE_GRACE_MINUTES,
+        absent: !validIn && !validOut,
+      });
+    });
+
+  records.forEach(record => {
+    record.missedIn = !record.timeIn && !!record.timeOut;
+    record.missedOut = !!record.timeIn && !record.timeOut;
+    record.hasScan = !!record.timeIn || !!record.timeOut;
+    record.exception = record.absent || record.late || record.missedIn || record.missedOut;
+  });
+  return records;
+}
+
+/* Primary issue per row: absent beats missed scans beats late arrival */
+function primaryIssueOf(record) {
+  if (record.absent) return 'absent';
+  if (record.missedIn || record.missedOut) return 'missed';
+  if (record.late) return 'late';
+  return '';
+}
+
+function exceptionLabelOf(record) {
+  if (record.absent) return 'Absent';
+  if (record.missedIn) return 'Missed time-in scan';
+  if (record.missedOut) return 'Missed time-out scan';
+  if (record.late) return 'Late arrival';
+  return '';
+}
+
+/* Whole-years age from the birthdate given at registration */
+function ageOf(account) {
+  let birth = null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(account.birthDate || '')) {
+    birth = new Date(`${account.birthDate}T00:00:00`);
+  } else {
+    const match = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(account.birthday || '');
+    if (match) {
+      const shortYear = Number(match[3]);
+      const fullYear = shortYear <= new Date().getFullYear() % 100 ? 2000 + shortYear : 1900 + shortYear;
+      birth = new Date(fullYear, Number(match[1]) - 1, Number(match[2]));
+    }
+  }
+  if (!birth || Number.isNaN(birth.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  if ((now.getMonth() + 1) * 100 + now.getDate() < (birth.getMonth() + 1) * 100 + birth.getDate()) age -= 1;
+  return age < 0 || age > 120 ? null : age;
+}
+
+/* Standalone printable report (file:// safe: no external resources).
+   Returns false when the browser blocks the report window. */
+function openPrintReport({ title, columns, rows, emptyText }) {
+  const now = new Date();
+  const dateLabel = now.toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const fileLabel = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const win = window.open('', '_blank', 'width=960,height=700');
+  if (!win) return false;
+  const body = rows.length
+    ? rows.map(cells => `<tr>${cells.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')
+    : `<tr><td colspan="${columns.length}" class="empty">${escapeHtml(emptyText)}</td></tr>`;
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">`
+    + `<title>Sentry ${escapeHtml(title)} - ${fileLabel}</title>`
+    + `<style>*{box-sizing:border-box}body{margin:32px;color:#17213a;font:14px/1.5 'Segoe UI',Arial,sans-serif}`
+    + `.brand{color:#315ce9;letter-spacing:2px;font-size:12px;font-weight:800}`
+    + `h1{margin:4px 0;font-size:24px}.meta{color:#7d879b;font-size:12px;margin-bottom:16px}`
+    + `table{width:100%;border-collapse:collapse}th,td{padding:9px 10px;border-bottom:1px solid #e5e9f2;text-align:left}`
+    + `th{color:#7d879b;font-size:11px;letter-spacing:1px}.empty{color:#7d879b;text-align:center;padding:24px}`
+    + `.actions{margin-bottom:20px}.actions button{border:0;border-radius:7px;padding:10px 22px;background:#315ce9;color:#fff;font:700 13px 'Segoe UI',Arial,sans-serif;cursor:pointer}`
+    + `.actions p{color:#7d879b;font-size:12px}`
+    + `@media print{.actions{display:none}body{margin:0}}</style></head><body>`
+    + `<div class="brand">SENTRY SYSTEM</div><h1>${escapeHtml(title)}</h1>`
+    + `<div class="meta">${escapeHtml(dateLabel)} &middot; Generated ${escapeHtml(timeLabelOf(now))} &middot; ${rows.length} record${rows.length === 1 ? '' : 's'}</div>`
+    + `<div class="actions"><button onclick="window.print()">Print / Save as PDF</button>`
+    + `<p>Use your browser's print dialog to print this list or save it as a PDF file.</p></div>`
+    + `<table><thead><tr>${columns.map(col => `<th>${escapeHtml(col).toUpperCase()}</th>`).join('')}</tr></thead>`
+    + `<tbody>${body}</tbody></table></body></html>`);
+  win.document.close();
+  win.focus();
+  return true;
 }
 
 
@@ -1117,7 +1298,7 @@ function initWorkspace(toast, profiles) {
     const needle = query.trim().toLowerCase();
     const entries = Object.values(GUARDS).map(guard => ({
       name: guard.name, id: guard.id, post: guard.post,
-      sub: guard.assignment, contact: guard.phone,
+      sub: guard.assignment, contact: formatPhone(guard.phone),
       image: guard.image, status: directoryStatusOf(guard.name),
     }));
 
@@ -1130,10 +1311,9 @@ function initWorkspace(toast, profiles) {
           name, id: account.userId,
           post: account.post || account.department,
           sub: account.post ? (account.assignment || account.department) : 'No post assigned',
-          contact: account.phone || account.email,
+          contact: account.phone ? formatPhone(account.phone) : (account.email || ''),
           initials: name.split(/\s+/).map(word => word[0]).slice(0, 2).join('').toUpperCase(),
           tint, status: 'active',
-          userId: account.userId, hasPost: !!account.post,
         });
       });
 
@@ -1154,66 +1334,161 @@ function initWorkspace(toast, profiles) {
                 <div><strong>${escapeHtml(entry.name)}</strong><small>${escapeHtml(entry.id)}</small></div>
               </div>
             </td>
-            <td><strong>${escapeHtml(entry.post)}</strong><small>${escapeHtml(entry.sub || '—')}</small>${entry.userId ? `<button class="post-assign-btn" data-assign-post="${escapeHtml(entry.userId)}" type="button">${entry.hasPost ? 'Change' : 'Assign post'}</button>` : ''}</td>
+            <td><strong>${escapeHtml(entry.post)}</strong><small>${escapeHtml(entry.sub || '—')}</small></td>
             <td><strong>${escapeHtml(entry.contact)}</strong></td>
             <td><span class="status ${entry.status}">${pillText[entry.status]}</span></td>
           </tr>`).join('')
       : '<tr><td class="empty-pending" colspan="4">No guards match your search.</td></tr>';
   };
 
-  /* --- designated post assignment (approved staff accounts) --- */
+  /* --- personnel manager (assign/change staff guard posts) --- */
 
-  const postModal = $('#postAssignModal');
-  const postForm = $('#postAssignForm');
-  const postSite = $('#postAssignSite');
-  const postDetail = $('#postAssignDetail');
-  const postError = $('#postAssignError');
-  let postTargetId = '';
+  const renderPersonnelList = (query = '') => {
+    const needle = query.trim().toLowerCase();
+    const staff = getStoredAccounts().filter(account => account.status === 'Active');
+    const matches = staff.filter(account =>
+      !needle || `${displayNameOf(account)} ${account.userId} ${account.post || ''}`.toLowerCase().includes(needle));
+    $('#personnelCount').textContent = `${staff.length} staff guards · ${matches.length} shown`;
+    $('#personnelBody').innerHTML = matches.length
+      ? matches.map(account => {
+          const current = account.post || '';
+          const detail = account.assignment || '';
+          const options = '<option value="">Select location…</option>' + POST_LOCATIONS.map(site =>
+            `<option value="${escapeHtml(site)}"${site === current ? ' selected' : ''}>${escapeHtml(site)}</option>`).join('');
+          const currentCell = current
+            ? `${escapeHtml(current)}${detail ? `<br><small>${escapeHtml(detail)}</small>` : ''}`
+            : '<span class="personnel-none">No post assigned</span>';
+          return `<tr>
+            <td><strong>${escapeHtml(displayNameOf(account))}</strong><br><small>${escapeHtml(account.userId)}</small></td>
+            <td>${currentCell}</td>
+            <td><select class="personnel-location" aria-label="Location for ${escapeHtml(displayNameOf(account))}">${options}</select></td>
+            <td><input class="personnel-detail" value="${escapeHtml(detail)}" placeholder="e.g. Main Gate · Day shift" aria-label="Assignment detail"></td>
+            <td><button class="hr-report-print" data-save-post="${escapeHtml(account.userId)}" type="button">Save</button></td>
+          </tr>`;
+        }).join('')
+      : '<tr><td class="empty-pending" colspan="5">No staff match your search.</td></tr>';
+  };
 
-  /* Existing demo sites as suggestions so HR reuses consistent post names */
-  $('#postSiteOptions').innerHTML = [...new Set(Object.values(GUARDS).map(guard => guard.post))]
-    .map(site => `<option value="${escapeHtml(site)}">`).join('');
-
-  const closePostModal = () => { postModal.hidden = true; postTargetId = ''; };
-
-  $('#guardDirectoryRows').addEventListener('click', event => {
-    const button = event.target.closest('[data-assign-post]');
+  $('#managePersonnelBtn').addEventListener('click', () => {
+    $('#personnelSearch').value = '';
+    $('#personnelError').hidden = true;
+    renderPersonnelList();
+    $('#personnelModal').hidden = false;
+  });
+  $('#personnelSearch').addEventListener('input', event => renderPersonnelList(event.target.value));
+  $('#closePersonnel').addEventListener('click', () => { $('#personnelModal').hidden = true; });
+  closeWhenBackdropIsClicked($('#personnelModal'), () => { $('#personnelModal').hidden = true; });
+  $('#personnelBody').addEventListener('change', () => { $('#personnelError').hidden = true; });
+  $('#personnelBody').addEventListener('click', event => {
+    const button = event.target.closest('[data-save-post]');
     if (!button) return;
-    const account = getStoredAccounts().find(item => item.userId === button.dataset.assignPost);
-    if (!account) return;
-    postTargetId = account.userId;
-    $('#postAssignTitle').textContent = account.post ? 'Change designated post' : 'Assign designated post';
-    $('#postAssignGuard').textContent = `${displayNameOf(account)} · ${account.userId}`;
-    postSite.value = account.post || '';
-    postDetail.value = account.assignment || '';
-    postError.hidden = true;
-    postModal.hidden = false;
-    postSite.focus();
-  });
-
-  postForm.addEventListener('submit', event => {
-    event.preventDefault();
+    const row = button.closest('tr');
     const accounts = getStoredAccounts();
-    const account = accounts.find(item => item.userId === postTargetId);
-    if (!account) { closePostModal(); return; }
-    const site = postSite.value.trim();
-    if (!site) { postError.hidden = false; postSite.focus(); return; }
-    account.post = site;
-    account.assignment = postDetail.value.trim();
+    const account = accounts.find(item => item.userId === button.dataset.savePost);
+    if (!account) return;
+    const error = $('#personnelError');
+    const location = row.querySelector('.personnel-location').value;
+    if (!location && !account.post) {
+      error.textContent = `Select a location for ${displayNameOf(account)} first.`;
+      error.hidden = false;
+      return;
+    }
+    if (location) account.post = location;
+    account.assignment = row.querySelector('.personnel-detail').value.trim();
     saveStoredAccounts(accounts);
-    closePostModal();
+    error.hidden = true;
+    renderPersonnelList($('#personnelSearch').value);
     renderGuardDirectory($('#guardDirectorySearch').value);
-    toast(`Designated post assigned to ${displayNameOf(account)}`);
+    toast(`Post updated for ${displayNameOf(account)}`);
   });
 
-  postSite.addEventListener('input', () => { postError.hidden = true; });
-  $('#closePostAssign').addEventListener('click', closePostModal);
-  $('#cancelPostAssign').addEventListener('click', closePostModal);
-  closeWhenBackdropIsClicked(postModal, closePostModal);
+  /* --- HR workflow reports: attendance logs + exception reports --- */
+
+  let currentReport = null;
+
+  const openHrReport = mode => {
+    const records = collectTodayAttendance();
+    const isAttendance = mode === 'attendance';
+    const rows = isAttendance
+      ? records.filter(record => record.hasScan)
+      : records.filter(record => record.exception);
+    const columns = isAttendance
+      ? ['Guard name', 'Guard ID', 'Time in', 'Time out']
+      : ['Guard name', 'Guard ID', 'Time in', 'Time out', 'Issue'];
+    currentReport = {
+      title: isAttendance ? 'Attendance logs' : 'Exception reports',
+      columns,
+      rows: rows.map(record => isAttendance
+        ? [record.name, record.id, record.timeIn || '—', record.timeOut || '—']
+        : [record.name, record.id, record.timeIn || '—', record.timeOut || '—', exceptionLabelOf(record)]),
+      emptyText: isAttendance
+        ? 'No QR scans recorded today yet.'
+        : 'No exceptions today — every guard scanned on time.',
+    };
+    $('#hrReportTitle').textContent = `${currentReport.title} — today`;
+    $('#hrReportDate').textContent = new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    $('#hrReportHead').innerHTML = columns.map(col => `<th>${escapeHtml(col).toUpperCase()}</th>`).join('');
+    $('#hrReportBody').innerHTML = currentReport.rows.length
+      ? currentReport.rows.map(cells => `<tr>${cells.map((cell, index) => index === 0 ? `<td><strong>${escapeHtml(cell)}</strong></td>` : `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')
+      : `<tr><td class="empty-pending" colspan="${columns.length}">${escapeHtml(currentReport.emptyText)}</td></tr>`;
+    $('#hrReportModal').hidden = false;
+  };
+
+  $('#hrAttendanceLogsBtn').addEventListener('click', () => openHrReport('attendance'));
+  $('#hrExceptionReportsBtn').addEventListener('click', () => openHrReport('exceptions'));
+  $('#closeHrReport').addEventListener('click', () => { $('#hrReportModal').hidden = true; });
+  closeWhenBackdropIsClicked($('#hrReportModal'), () => { $('#hrReportModal').hidden = true; });
+  $('#hrReportPrint').addEventListener('click', () => {
+    if (!currentReport || !openPrintReport(currentReport)) toast('Allow pop-ups to download or print this report');
+  });
+
+  /* --- employee directory (registration details + age) --- */
+
+  const renderEmployeeDirectory = (query = '') => {
+    const needle = query.trim().toLowerCase();
+    const entries = Object.values(GUARDS).map(guard => ({
+      name: guard.name, id: guard.id, email: guard.email, contact: formatPhone(guard.phone), age: '—',
+    }));
+    getStoredAccounts()
+      .filter(account => account.status === 'Active')
+      .forEach(account => {
+        const age = ageOf(account);
+        entries.push({
+          name: displayNameOf(account), id: account.userId,
+          email: account.email || '—', contact: account.phone ? formatPhone(account.phone) : (account.email || '—'),
+          age: age === null ? '—' : String(age),
+        });
+      });
+    const matches = entries.filter(entry =>
+      !needle || `${entry.name} ${entry.id} ${entry.email}`.toLowerCase().includes(needle));
+    $('#employeeDirectoryPageCount').textContent = entries.length;
+    $('#employeeDirectoryPageBody').innerHTML = matches.length
+      ? matches.map(entry => `<tr><td><strong>${escapeHtml(entry.name)}</strong></td><td>${escapeHtml(entry.id)}</td><td>${escapeHtml(entry.email)}</td><td>${escapeHtml(entry.contact)}</td><td>${escapeHtml(entry.age)}</td></tr>`).join('')
+      : '<tr><td class="empty-pending" colspan="5">No guards match your search.</td></tr>';
+  };
+
+  const showHrWorkspace = () => {
+    $('#employeeDirectoryPage').hidden = true;
+    $('#hrPanel').hidden = false;
+    $('#hrActions').hidden = false;
+  };
+
+  $('#openEmployeeDirectory').addEventListener('click', () => {
+    const prefill = $('#employeeSearchInput').value;
+    $('#employeeDirectoryPageSearch').value = prefill;
+    renderEmployeeDirectory(prefill);
+    $('#hrPanel').hidden = true;
+    $('#hrActions').hidden = true;
+    $('#employeeDirectoryPage').hidden = false;
+    $('#employeeDirectoryPage').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  $('#backToHrWorkspace').addEventListener('click', showHrWorkspace);
+  $('#employeeDirectoryPageSearch').addEventListener('input', event => renderEmployeeDirectory(event.target.value));
 
   /* --- panel switching --- */
 
   const setPanel = panel => {
+    $('#employeeDirectoryPage').hidden = true;
     document.body.classList.remove(...bodyClasses);
     if (panel !== 'attendance') document.body.classList.add(`${panel}-panel-active`);
 

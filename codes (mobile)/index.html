@@ -85,6 +85,7 @@
               </div>
               <span class="status-pill" id="todayPill">● Off duty</span>
             </div>
+            <div class="status-post"><span>POST</span><b id="statusPost">—</b></div>
             <div class="status-times">
               <div><span>TIME IN</span><b id="timeInLabel">--:--</b></div>
               <div><span>TIME OUT</span><b id="timeOutLabel">--:--</b></div>
@@ -96,11 +97,11 @@
 
           <div class="quick-grid">
             <button type="button" data-goto="qr">
-              <span class="quick-icon">▦</span>
+              <span class="quick-icon"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAABgklEQVR4AbyUXU7DMBCEXV7gToAIN+GRWwC34JGbAALuBE8w38pjbWLJTarSyuP98exO12l6Vv75c3KBSQO9Cr8Vj7L7FhzzqSVuNXkCDiAg0ggbHWofVIOVKSUL3ESmlCfZXQWicocLjvnUQkYEOxOYIlMKBeXAj2sn1+cJnLO9k/Mt+H6xxOSVbutDHpDpVxZgPGDWs5xzIS9i8jl3pQDIxKIHiCALMB6IA200kym+Xyyx8/jgUxuQiUUPEEEWiMQB27VqgEy/jiHQd02ZkcBP5fFwDVLO4wOuA+B3GAnci71sRkxeR23xmwctkZ2RwIuIFwIP1yAmr/S6NRJY12EP66QCPCjg78Tb+eWgWs79wG05emOrgAMizBPwoEAcbNho3t5c1dEDyC2zP7tIpI2X5zLFuHyznZyMW8WIyPQrT2ASTXrmuoxr3Ws2gcdkPN+vC0bt4ZhPLdx3NrCcAJGmDmEjqOXKEI3SLECCAwi+Y2LyI8Axn1pEGn8p0A6O5fwBAAD//w+UuL8AAAAGSURBVAMA/uJGMY1A5o0AAAAASUVORK5CYII=" alt="" width="22" height="22"></span>
               <b>My QR code</b><small>Dynamic &middot; 30s</small>
             </button>
             <button type="button" data-goto="records">
-              <span class="quick-icon">◷</span>
+              <span class="quick-icon"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAABsklEQVR4AeySTS4FQRSFqyVsQ0xZAhIWYC5MkRgKCTPMSJiSYIoF2IAES2AqloEE31e6Xld3eN2Rx0jnnrq3zj23bv30UPjl779B6wXnV3SD+n1AcC2WCiFvEIlBD3mDaRYvBgTXYqnwtyeIHTsMo2j2wD1Ib2YsZw66svyKKvb7aInUI9gE4yCZsZw5NYnve0XDPdVnYOEpYQEugPfsBoWxnDk1apGEWgN/rXRk/QuKeaB59BMDsAEWwS1QJ4zlzEEHtdbUGphooiiJVbyxuzwkTrZDIHDRzKlRa02tgcc0kTBCySXQ5hzAMchtm4nA9SxpYo3318s0gtds7iM6vXNoQdLEmn4NWtaJ6es4huA7zJRxzXVt8FBWTZY+uVmCXaClBkkTa7o2uHIFEB8On5uP7Lvp5ZMm1uQNmr+pxz6yAvhwzheI18F3Zk6NWmtqf9FXRc8l+YRfAdoBwzmYAu5cGMuZgw5qrak1aP6mFq6pLnGGXwbuzl164jfmwljOnBq1pEKtQSRaBgvH0OyD+Ih4zVjOnBq5iPwNItFh8Ohb6CZAUcJYzhxUZT9pUFV3iD4AAAD//4imZ4EAAAAGSURBVAMAHepgMYRH2scAAAAASUVORK5CYII=" alt="" width="22" height="22"></span>
               <b>Records</b><small>Time in / out</small>
             </button>
           </div>
@@ -209,19 +210,19 @@
       <!-- Bottom tab bar -->
       <nav class="tabbar" id="tabbar" hidden>
         <button type="button" data-view="home" class="active">
-          <svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/></svg>
+          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAABPElEQVR4AezUXVLDMAwE4MDJ4GTAyYCTgT5P1ZFTN3V/n9rxxrK00lpunNflzr9zBN5iL987fMY8NWYFsjAR+IjqfDFtj1MCiilk/olS74GvgMH3F4Y5pvHYEpC4Lk7E8bxEOXZMCw4f+wDHBCRIlGDHds6u4BPjc2Ry2B1GAogSEBWwZo8ghiMmx5q9x1oAARFBojV7Czi4OHKt2Q1VQABBQPvW7BngVhH/X8urAs0RD8T8A2M5PYjYmITc6FIF0omIdAlyY5sdrAsje6O88xV8Ymt+t64ddIGy0NmoEJ9YoR6aMwIKyXS5Kvgyxh5iRmCYOOt8Cpw8qYceUV6Say5a5mat7ib7RGjZu10vFB9UH5sP2Am5fL8eUI+IKhGz2CWQ63uUnXQdKCiAUC/UObZcImo11A6a49aPfwAAAP//nxsQvAAAAAZJREFUAwDTtj8xSlDVvQAAAABJRU5ErkJggg==" alt="" width="23" height="23">
           <span>Home</span>
         </button>
         <button type="button" data-view="qr">
-          <svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h3v3h-3zM18 13h2v2h-2zM13 18h3v3h-3zM18 18h2v2h-2z"/></svg>
+          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAABgklEQVR4AbyUXU7DMBCEXV7gToAIN+GRWwC34JGbAALuBE8w38pjbWLJTarSyuP98exO12l6Vv75c3KBSQO9Cr8Vj7L7FhzzqSVuNXkCDiAg0ggbHWofVIOVKSUL3ESmlCfZXQWicocLjvnUQkYEOxOYIlMKBeXAj2sn1+cJnLO9k/Mt+H6xxOSVbutDHpDpVxZgPGDWs5xzIS9i8jl3pQDIxKIHiCALMB6IA200kym+Xyyx8/jgUxuQiUUPEEEWiMQB27VqgEy/jiHQd02ZkcBP5fFwDVLO4wOuA+B3GAnci71sRkxeR23xmwctkZ2RwIuIFwIP1yAmr/S6NRJY12EP66QCPCjg78Tb+eWgWs79wG05emOrgAMizBPwoEAcbNho3t5c1dEDyC2zP7tIpI2X5zLFuHyznZyMW8WIyPQrT2ASTXrmuoxr3Ws2gcdkPN+vC0bt4ZhPLdx3NrCcAJGmDmEjqOXKEI3SLECCAwi+Y2LyI8Axn1pEGn8p0A6O5fwBAAD//w+UuL8AAAAGSURBVAMA/uJGMY1A5o0AAAAASUVORK5CYII=" alt="" width="23" height="23">
           <span>My QR</span>
         </button>
         <button type="button" data-view="records">
-          <svg viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 0 8 8h-2a6 6 0 1 1-6-6zm1 2v5l4 2-.9 1.6L11 12z"/></svg>
+          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAABsklEQVR4AeySTS4FQRSFqyVsQ0xZAhIWYC5MkRgKCTPMSJiSYIoF2IAES2AqloEE31e6Xld3eN2Rx0jnnrq3zj23bv30UPjl779B6wXnV3SD+n1AcC2WCiFvEIlBD3mDaRYvBgTXYqnwtyeIHTsMo2j2wD1Ib2YsZw66svyKKvb7aInUI9gE4yCZsZw5NYnve0XDPdVnYOEpYQEugPfsBoWxnDk1apGEWgN/rXRk/QuKeaB59BMDsAEWwS1QJ4zlzEEHtdbUGphooiiJVbyxuzwkTrZDIHDRzKlRa02tgcc0kTBCySXQ5hzAMchtm4nA9SxpYo3318s0gtds7iM6vXNoQdLEmn4NWtaJ6es4huA7zJRxzXVt8FBWTZY+uVmCXaClBkkTa7o2uHIFEB8On5uP7Lvp5ZMm1uQNmr+pxz6yAvhwzheI18F3Zk6NWmtqf9FXRc8l+YRfAdoBwzmYAu5cGMuZgw5qrak1aP6mFq6pLnGGXwbuzl164jfmwljOnBq1pEKtQSRaBgvH0OyD+Ih4zVjOnBq5iPwNItFh8Ohb6CZAUcJYzhxUZT9pUFV3iD4AAAD//4imZ4EAAAAGSURBVAMAHepgMYRH2scAAAAASUVORK5CYII=" alt="" width="23" height="23">
           <span>Records</span>
         </button>
         <button type="button" data-view="profile">
-          <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm-7 8a7 7 0 0 1 14 0z"/></svg>
+          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAABXklEQVR4AcySXy4GQRDEF8dCwh24gyDxzAteeJYg7sAdSHAsf+qX9IyZTM/0ri8SX6a+rq2unpqd7Pr0x79/E7CnF30VPg1wND2O15w3uNIWj8KWsGaAo9GT1F9RAKc81fiXcCRsGOBo9PBI9lcUcGJjx6r3QroiOJqkKXngDaKATZt4sFqWpCVP2cs8CsjG35Io4N02PrBalqQlT9nLPAq4Meet6qGAH8DRJE3JA2+AuREL4Un8WuDzvFP9MMDR6OGR7K8ogKkz/e0LbwKfJoCj0ZPcX3MCmOaU2yL4ARxN0nhhHjtW7I4CdrT3s4Fr6eFCHqDSrl4AA2xOCGgnf5RzUcCMaL28AIwM4LzU367AF9MDHlkmZprDeAGYAYOEvfAwAB68WAihZngBycRgNgakewgvINjLbaeARVfk7rRU9N6A+wRL92IGVHNeAHcPKuOMB2ZAZfUCKsOqD98AAAD//8PGaIcAAAAGSURBVAMA16A+McSCrGkAAAAASUVORK5CYII=" alt="" width="23" height="23">
           <span>Profile</span>
         </button>
         <i class="home-bar" aria-hidden="true"></i>
@@ -236,5 +237,5 @@
 
   <script src="qrcode.min.js"></script>
   <script src="app.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3bf17dabd0a6e4e',t:'MTc4OTU1MzU1MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3cd9db6fb3a8514',t:'MTc4OTcwNTgzNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

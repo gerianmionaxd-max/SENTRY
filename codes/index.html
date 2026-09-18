@@ -302,31 +302,28 @@
           </div>
 
           <div class="hr-task-list">
-            <button type="button">
-              <span class="task-icon blue">◫</span>
+            <button type="button" id="hrAttendanceLogsBtn">
+              <span class="task-icon blue"><img src="../images/clipboard-list.png" alt="" width="20" height="20"></span>
               <span>
                 <strong>Attendance logs</strong>
                 <small>Review QR time-in and time-out records</small>
               </span>
-              <b><span id="hrAttendanceRecordCount">5</span> records →</b>
             </button>
 
-            <button type="button">
-              <span class="task-icon amber">!</span>
+            <button type="button" id="hrExceptionReportsBtn">
+              <span class="task-icon amber"><img src="../images/shield-alert.png" alt="" width="20" height="20"></span>
               <span>
                 <strong>Exception reports</strong>
                 <small>Late arrivals, absences, and missed scans</small>
               </span>
-              <b><span id="hrExceptionTaskCount">2</span> open →</b>
             </button>
 
             <button type="button">
-              <span class="task-icon violet">✓</span>
+              <span class="task-icon violet"><img src="../images/bell.png" alt="" width="20" height="20"></span>
               <span>
                 <strong>Policy updates</strong>
                 <small>Publish and track staff acknowledgements</small>
               </span>
-              <b>No updates</b>
             </button>
           </div>
         </article>
@@ -335,8 +332,8 @@
           <article>
             <h2>Employee information</h2>
             <p>Search or update guard registrations.</p>
-            <div class="employee-search">⌕ <input placeholder="Search employee name or ID"></div>
-            <button class="hr-link" type="button">Open employee directory →</button>
+            <div class="employee-search">⌕ <input id="employeeSearchInput" placeholder="Search employee name or ID"></div>
+            <button class="hr-link" type="button" id="openEmployeeDirectory">Open employee directory →</button>
           </article>
 
           <article>
@@ -355,7 +352,10 @@
           <h2>Registered guards <span id="guardDirectoryCount">0</span></h2>
           <p>All guard records, including approved staff accounts.</p>
         </div>
-        <div class="directory-search">⌕ <input id="guardDirectorySearch" placeholder="Search name, ID or post"></div>
+        <div class="directory-head-actions">
+          <div class="directory-search">⌕ <input id="guardDirectorySearch" placeholder="Search name, ID or post"></div>
+          <button class="hr-primary" id="managePersonnelBtn" type="button">Manage Personnel</button>
+        </div>
       </div>
 
       <div class="directory-table-wrap">
@@ -369,6 +369,32 @@
             </tr>
           </thead>
           <tbody id="guardDirectoryRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="guard-directory" id="employeeDirectoryPage" hidden aria-label="Employee directory">
+      <div class="directory-head">
+        <div>
+          <button class="hr-back-link" id="backToHrWorkspace" type="button">← Back to HR workspace</button>
+          <h2>Employee directory <span id="employeeDirectoryPageCount">0</span></h2>
+          <p>Registration details and ages for all registered guards.</p>
+        </div>
+        <div class="directory-search">⌕ <input id="employeeDirectoryPageSearch" placeholder="Search name, ID or email"></div>
+      </div>
+
+      <div class="directory-table-wrap">
+        <table class="directory-table">
+          <thead>
+            <tr>
+              <th>GUARD</th>
+              <th>GUARD ID</th>
+              <th>EMAIL</th>
+              <th>CONTACT</th>
+              <th>AGE</th>
+            </tr>
+          </thead>
+          <tbody id="employeeDirectoryPageBody"></tbody>
         </table>
       </div>
     </section>
@@ -583,7 +609,7 @@
           <h2>Recent activity</h2>
           <p>Latest system events</p>
           <div class="activity-row"><b>QR time-in verified</b><span>Ramon Santos · 06:42 AM</span></div>
-          <div class="activity-row"><b>Attendance correction requested</b><span>Leo Jimenez · 07:03 AM</span></div>
+          <div class="activity-row"><b>Attendance correction requested</b><span>Leo Jimenez · 07:41 AM</span></div>
           <div class="activity-row"><b>Payroll report generated</b><span>Aug 1–15 period · 08:15 AM</span></div>
         </article>
       </div>
@@ -779,7 +805,7 @@
                   </div>
                 </td>
                 <td><strong>Macario-Catalina Building</strong><small>Gate post · Day shift</small></td>
-                <td><strong>07:03 AM</strong><small>QR time-in · Out: 03:00 PM</small></td>
+                <td><strong>07:41 AM</strong><small>QR time-in · Out: 03:00 PM</small></td>
                 <td><span class="status late">● Late</span></td>
                 <td><button class="more">•••</button></td>
               </tr>
@@ -907,31 +933,45 @@
     </div>
   </div>
 
-  <div class="hr-action-modal" id="postAssignModal" role="dialog" aria-modal="true" aria-labelledby="postAssignTitle" hidden>
-    <div class="hr-action-dialog">
-      <button class="modal-close" id="closePostAssign" type="button" aria-label="Close post assignment">×</button>
+
+  <div class="hr-action-modal" id="hrReportModal" role="dialog" aria-modal="true" aria-labelledby="hrReportTitle" hidden>
+    <div class="hr-action-dialog hr-report-dialog">
+      <button class="modal-close" id="closeHrReport" type="button" aria-label="Close report">×</button>
       <p class="eyebrow">HR STAFF WORKSPACE</p>
-      <h2 id="postAssignTitle">Assign designated post</h2>
-      <p id="postAssignGuard"></p>
-      <form id="postAssignForm" class="hr-form">
-        <label>Designated post
-          <input id="postAssignSite" list="postSiteOptions" placeholder="e.g. Trinitarian Centre" autocomplete="off">
-          <datalist id="postSiteOptions"></datalist>
-        </label>
-        <label>Assignment detail (optional)
-          <input id="postAssignDetail" placeholder="e.g. Main Gate · Day shift" autocomplete="off">
-        </label>
-        <p class="post-assign-error" id="postAssignError" hidden>Enter the guard's designated post.</p>
-        <div class="post-assign-buttons">
-          <button type="submit">Save post</button>
-          <button class="post-assign-cancel" id="cancelPostAssign" type="button">Cancel</button>
-        </div>
-      </form>
+      <h2 id="hrReportTitle"></h2>
+      <div class="hr-report-bar">
+        <p id="hrReportDate"></p>
+        <button class="hr-report-print" id="hrReportPrint" type="button">Download / Print</button>
+      </div>
+      <div class="hr-report-table-wrap">
+        <table class="hr-report-table">
+          <thead><tr id="hrReportHead"></tr></thead>
+          <tbody id="hrReportBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="hr-action-modal" id="personnelModal" role="dialog" aria-modal="true" aria-labelledby="personnelTitle" hidden>
+    <div class="hr-action-dialog hr-report-dialog">
+      <button class="modal-close" id="closePersonnel" type="button" aria-label="Close personnel manager">×</button>
+      <p class="eyebrow">HR STAFF WORKSPACE</p>
+      <h2 id="personnelTitle">Manage personnel</h2>
+      <p id="personnelCount"></p>
+      <div class="directory-search personnel-search">⌕ <input id="personnelSearch" placeholder="Search name, ID or post"></div>
+      <p class="personnel-error" id="personnelError" hidden></p>
+      <div class="hr-report-table-wrap">
+        <table class="hr-report-table">
+          <thead><tr><th>GUARD</th><th>CURRENT POST</th><th>LOCATION</th><th>DETAIL</th><th></th></tr></thead>
+          <tbody id="personnelBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
   <div class="toast" id="toast">QR scanner is ready to launch</div>
 
   <script src="script.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3bf14d018207a6c',t:'MTc4OTU1MzQyNQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3cd5af1ae8aef7b',t:'MTc4OTcwMzA5OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

@@ -48,6 +48,16 @@ function readAccounts() {
   }
 }
 
+/* Any PH mobile shape (+639…, 09…, spaced or not) -> +63 917 555 0156 */
+function formatPhone(phone) {
+  const digits = (phone || '').replace(/\D/g, '');
+  let local = digits;
+  if (digits.length === 12 && digits.startsWith('63')) local = digits.slice(2);
+  else if (digits.length === 11 && digits.startsWith('0')) local = digits.slice(1);
+  if (/^9\d{9}$/.test(local)) return `+63 ${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6)}`;
+  return phone || '';
+}
+
 function displayNameOf(account) {
   if (account.firstName) {
     return [account.firstName, account.middleName, account.lastName].filter(Boolean).join(' ');
@@ -170,6 +180,28 @@ function rejectLogin(message) {
   form.classList.add('shake');
 }
 
+function currentPostLabel() {
+  return [guard.post, guard.assignment].filter(Boolean).join(' · ') || 'Not yet assigned';
+}
+
+/* Re-read our account after HR edits it elsewhere: storage events fire
+   live from other tabs, visibility changes cover coming back to this one */
+function refreshAccount() {
+  if (!guard) return;
+  const fresh = readAccounts().find(item => item.userId === guard.userId);
+  if (!fresh || fresh.status !== 'Active') return;
+  const before = currentPostLabel();
+  guard = fresh;
+  const after = currentPostLabel();
+  applyIdentity();
+  renderAll();
+  if (before !== after) {
+    toast(after === 'Not yet assigned'
+      ? 'Your assigned post was removed.'
+      : `Your assigned post is now ${after}.`);
+  }
+}
+
 function applyIdentity() {
   const name = displayNameOf(guard);
   const initials = name.split(/\s+/).map(word => word[0]).slice(0, 2).join('').toUpperCase() || '··';
@@ -189,8 +221,9 @@ function applyIdentity() {
 
   $('#dId').textContent = guard.userId;
   $('#dDept').textContent = guard.department || 'Security';
-  $('#dPost').textContent = [guard.post, guard.assignment].filter(Boolean).join(' · ') || 'Not yet assigned';
-  $('#dPhone').textContent = guard.phone || '—';
+  $('#dPost').textContent = currentPostLabel();
+  $('#statusPost').textContent = currentPostLabel();
+  $('#dPhone').textContent = guard.phone ? formatPhone(guard.phone) : '—';
   $('#dEmail').textContent = guard.email;
   $('#dBirth').textContent = guard.birthday || '—';
   const locality = [guard.barangay || guard.district, guard.city].filter(Boolean).join(', ');
@@ -295,6 +328,7 @@ function recordRow(dateLabel, timeIn, timeOut, status, highlight = false) {
         <div><span>TIME OUT</span><b>${timeOut}</b></div>
         <div><span>HOURS</span><b>${hours}</b></div>
       </div>
+      <div class="record-post"><span>POST</span><b>${currentPostLabel()}</b></div>
     </article>`;
 }
 
@@ -548,4 +582,10 @@ document.addEventListener('DOMContentLoaded', () => {
   initAuth();
   initNavigation();
   initScannerDemo();
+  window.addEventListener('storage', event => {
+    if (event.key === USER_ACCOUNTS_KEY) refreshAccount();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshAccount();
+  });
 });
