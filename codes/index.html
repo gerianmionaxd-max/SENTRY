@@ -674,72 +674,7 @@
         </div>
       </div>
 
-      <div class="staff-track" id="staffTrack">
-        <article class="staff-card featured">
-          <div class="staff-photo"><img src="../images/SP.jpg" alt=""><i>✓</i></div>
-          <h3>Ramon Santos</h3>
-          <p>Trinitarian Centre · Main Gate</p>
-          <span class="staff-status">● On duty</span>
-          <div class="attendance-scores">
-            <div><b>98%</b><small>Monthly</small></div>
-            <span></span>
-            <div><b>96%</b><small>Yearly</small></div>
-          </div>
-          <button class="profile-button" data-guard="ramon" type="button">View profile</button>
-        </article>
-
-        <article class="staff-card">
-          <div class="staff-photo"><img src="../images/RW.png" alt=""><i>✓</i></div>
-          <h3>Ricardo Williams</h3>
-          <p>Trinidad Complex · Lobby</p>
-          <span class="staff-status">● On duty</span>
-          <div class="attendance-scores">
-            <div><b>94%</b><small>Monthly</small></div>
-            <span></span>
-            <div><b>92%</b><small>Yearly</small></div>
-          </div>
-          <button class="profile-button" data-guard="ricardo" type="button">View profile</button>
-        </article>
-
-        <article class="staff-card">
-          <div class="staff-photo"><img src="../images/LJ.webp" alt=""><i>!</i></div>
-          <h3>Leo Jimenez</h3>
-          <p>Macario-Catalina Building · Gate</p>
-          <span class="staff-status late-text">● Late arrival</span>
-          <div class="attendance-scores">
-            <div><b>88%</b><small>Monthly</small></div>
-            <span></span>
-            <div><b>91%</b><small>Yearly</small></div>
-          </div>
-          <button class="profile-button" data-guard="leo" type="button">View profile</button>
-        </article>
-
-        <article class="staff-card">
-          <div class="staff-photo"><img src="../images/JF.png" alt=""><i>✓</i></div>
-          <h3>Juan Flores</h3>
-          <p>Trinitarian Centre · Loading Bay</p>
-          <span class="staff-status">● On duty</span>
-          <div class="attendance-scores">
-            <div><b>97%</b><small>Monthly</small></div>
-            <span></span>
-            <div><b>95%</b><small>Yearly</small></div>
-          </div>
-          <button class="profile-button" data-guard="juan" type="button">View profile</button>
-        </article>
-
-        <article class="staff-card">
-          <div class="staff-photo"><img src="../images/KS.jpg" alt=""><i>✓</i></div>
-          <h3>Kevin Silva</h3>
-          <p>JTA Building · Perimeter</p>
-          <span class="staff-status">● On duty</span>
-          <div class="attendance-scores">
-            <div><b>93%</b><small>Monthly</small></div>
-            <span></span>
-            <div><b>94%</b><small>Yearly</small></div>
-          </div>
-          <button class="profile-button" data-guard="kevin" type="button">View profile</button>
-        </article>
-      </div>
+      <div class="staff-track" id="staffTrack"></div>
     </section>
 
     <!-- Live statistics -->
@@ -794,7 +729,7 @@
             <h2>Today’s attendance log</h2>
             <p>Live QR-based time-in activity</p>
           </div>
-          <button class="text-button" id="viewAll">View all <span>→</span></button>
+          <button class="text-button view-all-button" id="viewAll" type="button">View all <span>→</span></button>
         </div>
 
         <div class="filters">
@@ -802,7 +737,8 @@
           <button class="filter" data-filter="present">On duty <span id="presentFilterCount">3</span></button>
           <button class="filter" data-filter="late">Late <span id="lateFilterCount">1</span></button>
           <button class="filter" data-filter="absent">Absent <span id="absentFilterCount">1</span></button>
-          <button class="date-button">▣ &nbsp; 10 Aug, 2026 &nbsp;⌄</button>
+          <button class="date-button" id="attendanceDateButton" type="button">▣ &nbsp; <span id="attendanceDateLabel">Today</span> &nbsp;⌄</button>
+          <input id="attendanceDatePicker" class="date-picker-native" type="date" aria-label="Select attendance date">
         </div>
 
         <div class="table-wrap">
@@ -811,77 +747,12 @@
               <tr>
                 <th>PERSONNEL</th>
                 <th>ASSIGNED POST</th>
-                <th>TIME IN / OUT</th>
+                <th>TIME IN</th>
+                <th>TIME OUT</th>
                 <th>STATUS</th>
-                <th></th>
               </tr>
             </thead>
-            <tbody id="attendanceRows">
-              <tr data-status="present" data-qr="SG-2024-0182">
-                <td>
-                  <div class="person">
-                    <div class="avatar"><img src="../images/SP.jpg" alt=""></div>
-                    <div><strong>Ramon Santos</strong><small>SG-2024-0182</small></div>
-                  </div>
-                </td>
-                <td><strong>Trinitarian Centre</strong><small>Main entrance · Day shift</small></td>
-                <td><strong>06:42 AM</strong><small>QR time-in · Out: 03:00 PM</small></td>
-                <td><span class="status present">● On duty</span></td>
-                <td><button class="more">•••</button></td>
-              </tr>
-
-              <tr data-status="present" data-qr="SG-2024-0097">
-                <td>
-                  <div class="person">
-                    <div class="avatar"><img src="../images/RW.png" alt=""></div>
-                    <div><strong>Ricardo Williams</strong><small>SG-2024-0097</small></div>
-                  </div>
-                </td>
-                <td><strong>Trinidad Complex</strong><small>Lobby post · Day shift</small></td>
-                <td><strong>06:39 AM</strong><small>QR time-in · Out: 03:00 PM</small></td>
-                <td><span class="status present">● On duty</span></td>
-                <td><button class="more">•••</button></td>
-              </tr>
-
-              <tr data-status="late" data-qr="SG-2024-0241">
-                <td>
-                  <div class="person">
-                    <div class="avatar"><img src="../images/LJ.webp" alt=""></div>
-                    <div><strong>Leo Jimenez</strong><small>SG-2024-0241</small></div>
-                  </div>
-                </td>
-                <td><strong>Macario-Catalina Building</strong><small>Gate post · Day shift</small></td>
-                <td><strong>07:41 AM</strong><small>QR time-in · Out: 03:00 PM</small></td>
-                <td><span class="status late">● Late</span></td>
-                <td><button class="more">•••</button></td>
-              </tr>
-
-              <tr data-status="absent" data-qr="SG-2024-0156">
-                <td>
-                  <div class="person">
-                    <div class="avatar"><img src="../images/KS.jpg" alt=""></div>
-                    <div><strong>Kevin Silva</strong><small>SG-2024-0156</small></div>
-                  </div>
-                </td>
-                <td><strong>JTA Building</strong><small>Perimeter post · Night shift</small></td>
-                <td><strong>—</strong><small>No QR scan recorded</small></td>
-                <td><span class="status absent">● Absent</span></td>
-                <td><button class="more">•••</button></td>
-              </tr>
-
-              <tr data-status="present" data-qr="SG-2024-0064">
-                <td>
-                  <div class="person">
-                    <div class="avatar"><img src="../images/JF.png" alt=""></div>
-                    <div><strong>Juan Flores</strong><small>SG-2024-0064</small></div>
-                  </div>
-                </td>
-                <td><strong>Trinitarian Centre</strong><small>Loading bay · Day shift</small></td>
-                <td><strong>06:47 AM</strong><small>QR time-in · Out: 03:00 PM</small></td>
-                <td><span class="status present">● On duty</span></td>
-                <td><button class="more">•••</button></td>
-              </tr>
-            </tbody>
+            <tbody id="attendanceRows"></tbody>
           </table>
         </div>
       </div>
@@ -1019,5 +890,5 @@
   <div class="toast" id="toast">QR scanner is ready to launch</div>
 
   <script src="script.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3ce26c75acb5c88',t:'MTc4OTcxMTQ0OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3e971132c93fcfa',t:'MTc4OTk5NzYwNg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

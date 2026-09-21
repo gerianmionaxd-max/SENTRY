@@ -792,18 +792,49 @@ function initAuthentication() {
    Attendance filters and QR lookup
 ------------------------------------------------------------------ */
 
+let activeAttendanceFilter = 'all';
+let selectedAttendanceDate = new Date();
+
+function dateInputValue(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function parseDateInput(value) {
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function sameCalendarDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function updateAttendanceDateLabel() {
+  const label = $('#attendanceDateLabel');
+  const picker = $('#attendanceDatePicker');
+  if (label) {
+    label.textContent = selectedAttendanceDate.toLocaleDateString('en-PH', {
+      day: '2-digit', month: 'short', year: 'numeric',
+    });
+  }
+  if (picker) picker.value = dateInputValue(selectedAttendanceDate);
+}
+
 function initAttendance(toast) {
   const filters = $$('.filter');
-  const rows = $$('#attendanceRows tr');
   const searchInput = $('#qrSearch');
+  const dateButton = $('#attendanceDateButton');
+  const datePicker = $('#attendanceDatePicker');
 
-  const showRows = predicate => rows.forEach(row => { row.hidden = !predicate(row); });
+  const rows = () => $$('#attendanceRows tr[data-status]');
+  const showRows = predicate => rows().forEach(row => { row.hidden = !predicate(row); });
   const activateFilter = activeFilter =>
     filters.forEach(filter => filter.classList.toggle('active', filter === activeFilter));
 
   filters.forEach(filter => filter.addEventListener('click', () => {
+    activeAttendanceFilter = filter.dataset.filter;
     activateFilter(filter);
-    const status = filter.dataset.filter;
+    const status = activeAttendanceFilter;
     showRows(row => status === 'all' || row.dataset.status === status);
   }));
 
@@ -823,6 +854,19 @@ function initAttendance(toast) {
       : 'Showing all guard attendance records');
   };
 
+  updateAttendanceDateLabel();
+  dateButton.addEventListener('click', () => {
+    if (typeof datePicker.showPicker === 'function') datePicker.showPicker();
+    else datePicker.click();
+  });
+  datePicker.addEventListener('change', () => {
+    selectedAttendanceDate = parseDateInput(datePicker.value);
+    updateAttendanceDateLabel();
+    renderAttendanceBoard();
+    updateSystemCounts();
+    toast(`Showing attendance for ${$('#attendanceDateLabel').textContent}`);
+  });
+
   $('#qrSearchBtn').addEventListener('click', searchByQr);
   searchInput.addEventListener('keydown', event => { if (event.key === 'Enter') searchByQr(); });
 }
@@ -833,18 +877,19 @@ function initAttendance(toast) {
 ------------------------------------------------------------------ */
 
 function updateSystemCounts() {
-  const rows = $$('#attendanceRows tr');
+  const rows = $$('#attendanceRows tr[data-status]');
   const countByStatus = status => rows.filter(row => row.dataset.status === status).length;
 
   const total = rows.length;
   const onDuty = countByStatus('present');
   const late = countByStatus('late');
   const absent = countByStatus('absent');
-  const verified = total - absent;
+  const verified = Math.max(0, total - absent);
   const exceptions = late + absent;
 
   const accounts = getStoredAccounts();
   const activeAccounts = accounts.filter(account => account.status === 'Active').length;
+  const activeSecurityCount = activeSecurityAccounts().length;
   const pendingAccounts = accounts.filter(account => account.status === 'Pending').length;
 
   const setText = (selector, value) => {
@@ -875,7 +920,7 @@ function updateSystemCounts() {
   const exceptionNote = issueParts.length ? issueParts.join(' · ') : 'No exceptions';
 
   /* HR panel */
-  setText('#hrRegisteredGuardCount', Object.keys(GUARDS).length + activeAccounts);
+  setText('#hrRegisteredGuardCount', activeSecurityCount);
   setText('#hrExceptionCount', flaggedToday.length);
   setText('#hrExceptionNote', `${exceptionNote} today`);
   setText('#hrPendingAccountCount', pendingAccounts);
@@ -885,12 +930,12 @@ function updateSystemCounts() {
   setText('#payrollTaskCount', verified);
 
   /* Admin panel */
-  setText('#adminAttendanceRate', `${Math.round((onDuty / total) * 100)}%`);
+  setText('#adminAttendanceRate', `${total ? Math.round((onDuty / total) * 100) : 0}%`);
   setText('#adminOnDutyCount', onDuty);
   setText('#adminCoverageNote', `Of ${total} current guards`);
   setText('#adminExceptionCount', flaggedToday.length);
   setText('#adminExceptionNote', exceptionNote);
-  setText('#adminVerificationRate', `${Math.round((verified / total) * 100)}%`);
+  setText('#adminVerificationRate', `${total ? Math.round((verified / total) * 100) : 0}%`);
   setText('#adminLateCount', lateToday);
   setText('#adminAbsentCount', absentToday);
 }
@@ -947,49 +992,54 @@ function minutesOfDay(date) {
 }
 
 /* One record per guard for today, whether they scanned or not */
-function collectTodayAttendance() {
-  const records = [];
-  const today = todayKeyLocal();
+function activeSecurityAccounts() {
+  return getStoredAccounts().filter(account => account.status === 'Active' && account.department === 'Security');
+}
 
-  /* Demo guards come from the attendance board (single source of truth) */
-  $$('#attendanceRows tr').forEach(row => {
-    const timeCell = row.cells[2];
-    const inLabel = timeCell.querySelector('strong')?.textContent.trim() || '';
-    const outMatch = /Out:\s*([0-9]{1,2}:[0-9]{2}\s*[AP]M)/i.exec(timeCell.querySelector('small')?.textContent || '');
-    const scannedIn = /^[0-9]{1,2}:[0-9]{2}\s*[AP]M$/i.test(inLabel);
-    records.push({
-      name: row.querySelector('.person strong')?.textContent.trim() || '',
-      id: row.dataset.qr || row.querySelector('.person small')?.textContent.trim() || '',
-      timeIn: scannedIn ? inLabel.toUpperCase() : '',
-      timeOut: outMatch ? outMatch[1].toUpperCase() : '',
-      late: row.dataset.status === 'late',
-      absent: row.dataset.status === 'absent',
-    });
-  });
+function currentPostLabelOf(account) {
+  return [account.post, account.assignment].filter(Boolean).join(' · ') || 'Not yet assigned';
+}
 
-  /* Staff guards come from their live mobile QR states (same browser store) */
-  getStoredAccounts()
-    .filter(account => account.status === 'Active' && account.department === 'Security')
-    .forEach(account => {
-      let state = null;
-      try {
-        state = JSON.parse(localStorage.getItem(MOBILE_TODAY_KEY_PREFIX + account.userId) || 'null');
-      } catch { state = null; }
-      const fresh = state && state.key === today;
-      const inDate = fresh && state.in ? new Date(state.in) : null;
-      const outDate = fresh && state.out ? new Date(state.out) : null;
-      const validIn = inDate && !Number.isNaN(inDate.getTime());
-      const validOut = outDate && !Number.isNaN(outDate.getTime());
-      records.push({
-        name: displayNameOf(account),
-        id: account.userId,
-        timeIn: validIn ? timeLabelOf(inDate) : '',
-        timeOut: validOut ? timeLabelOf(outDate) : '',
-        late: !!validIn && minutesOfDay(inDate) > SHIFT_START_MINUTES + LATE_GRACE_MINUTES,
-        absent: !validIn && !validOut,
-      });
-    });
+function simpleHash(text) {
+  let hash = 0;
+  String(text).split('').forEach(char => { hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0; });
+  return Math.abs(hash);
+}
 
+function attendanceStateFor(account, date = selectedAttendanceDate) {
+  const key = todayKeyLocal(date);
+  let state = null;
+  try {
+    state = JSON.parse(localStorage.getItem(MOBILE_TODAY_KEY_PREFIX + account.userId) || 'null');
+  } catch { state = null; }
+
+  const fresh = state && state.key === key;
+  const inDate = fresh && state.in ? new Date(state.in) : null;
+  const outDate = fresh && state.out ? new Date(state.out) : null;
+  const validIn = inDate && !Number.isNaN(inDate.getTime());
+  const validOut = outDate && !Number.isNaN(outDate.getTime());
+  const late = !!validIn && minutesOfDay(inDate) > SHIFT_START_MINUTES + LATE_GRACE_MINUTES;
+
+  return {
+    account,
+    name: displayNameOf(account),
+    id: account.userId,
+    post: account.post || account.department || 'Security',
+    assignment: account.post ? (account.assignment || account.department || 'Security') : 'Not yet assigned',
+    timeIn: validIn ? timeLabelOf(inDate) : '',
+    timeOut: validOut ? timeLabelOf(outDate) : '',
+    late,
+    absent: !validIn && !validOut,
+    completed: !!validIn && !!validOut,
+    phone: account.phone || '',
+    email: account.email || '',
+  };
+}
+
+/* One record per approved Security guard for the selected date. The time-in/out
+   values come from the same localStorage keys written by the mobile QR demo. */
+function collectTodayAttendance(date = selectedAttendanceDate) {
+  const records = activeSecurityAccounts().map(account => attendanceStateFor(account, date));
   records.forEach(record => {
     record.missedIn = !record.timeIn && !!record.timeOut;
     record.missedOut = !!record.timeIn && !record.timeOut;
@@ -997,6 +1047,69 @@ function collectTodayAttendance() {
     record.exception = record.absent || record.late || record.missedIn || record.missedOut;
   });
   return records;
+}
+
+function renderAttendanceBoard() {
+  updateAttendanceDateLabel();
+  const records = collectTodayAttendance();
+  const rows = records.map(record => {
+    const statusKey = record.absent ? 'absent' : record.late ? 'late' : 'present';
+    const statusLabel = record.absent ? '● Absent' : record.late ? '● Late' : record.completed ? '● Completed' : '● On duty';
+    const initials = record.name.split(/\s+/).map(word => word[0]).slice(0, 2).join('').toUpperCase() || 'SG';
+    const hue = simpleHash(record.id) % 360;
+    return `<tr data-status="${statusKey}" data-qr="${escapeHtml(record.id)}">
+      <td>
+        <div class="person">
+          <div class="avatar initials generated-avatar" style="background:hsl(${hue} 85% 94%);color:hsl(${hue} 70% 36%)">${escapeHtml(initials)}</div>
+          <div><strong>${escapeHtml(record.name)}</strong><small>${escapeHtml(record.id)}</small></div>
+        </div>
+      </td>
+      <td><strong>${escapeHtml(record.post)}</strong><small>${escapeHtml(record.assignment)}</small></td>
+      <td><strong>${escapeHtml(record.timeIn || '—')}</strong><small>${record.timeIn ? 'QR time-in' : 'No time-in scan'}</small></td>
+      <td><strong>${escapeHtml(record.timeOut || '—')}</strong><small>${record.timeOut ? 'QR time-out' : 'No time-out scan'}</small></td>
+      <td><span class="status ${statusKey}">${statusLabel}</span></td>
+    </tr>`;
+  });
+  $('#attendanceRows').innerHTML = rows.length
+    ? rows.join('')
+    : '<tr><td class="empty-pending" colspan="5">No approved Security guard accounts are available for attendance tracking.</td></tr>';
+
+  renderStaffCarousel(records);
+
+  const activeButton = $(`.filter[data-filter="${activeAttendanceFilter}"]`) || $('.filter[data-filter="all"]');
+  $$('.filter').forEach(filter => filter.classList.toggle('active', filter === activeButton));
+  $$('#attendanceRows tr[data-status]').forEach(row => {
+    row.hidden = activeAttendanceFilter !== 'all' && row.dataset.status !== activeAttendanceFilter;
+  });
+}
+
+function renderStaffCarousel(records = collectTodayAttendance()) {
+  const track = $('#staffTrack');
+  if (!track) return;
+  if (!records.length) {
+    track.innerHTML = '<article class="staff-card empty-staff-card"><h3>No active guard accounts</h3><p>Approved Security accounts will appear here after registration.</p></article>';
+    return;
+  }
+  track.innerHTML = records.map(record => {
+    const statusKey = record.absent ? 'absent' : record.late ? 'late' : 'present';
+    const statusText = record.absent ? '● Absent' : record.late ? '● Late arrival' : record.completed ? '● Completed' : '● On duty';
+    const initials = record.name.split(/\s+/).map(word => word[0]).slice(0, 2).join('').toUpperCase() || 'SG';
+    const hue = simpleHash(record.id) % 360;
+    const monthly = 88 + (simpleHash(record.id + 'month') % 11);
+    const yearly = 90 + (simpleHash(record.id + 'year') % 8);
+    return `<article class="staff-card">
+      <div class="staff-photo initials generated-avatar" style="background:hsl(${hue} 85% 94%);color:hsl(${hue} 70% 36%)"><span>${escapeHtml(initials)}</span><i>${statusKey === 'late' ? '!' : statusKey === 'absent' ? '–' : '✓'}</i></div>
+      <h3>${escapeHtml(record.name)}</h3>
+      <p>${escapeHtml(currentPostLabelOf(record.account))}</p>
+      <span class="staff-status ${statusKey === 'late' ? 'late-text' : statusKey === 'absent' ? 'absent-text' : ''}">${statusText}</span>
+      <div class="attendance-scores">
+        <div><b>${monthly}%</b><small>Monthly</small></div>
+        <span></span>
+        <div><b>${yearly}%</b><small>Yearly</small></div>
+      </div>
+      <button class="profile-button" data-user-id="${escapeHtml(record.id)}" type="button">View profile</button>
+    </article>`;
+  }).join('');
 }
 
 /* Primary issue per row: absent beats missed scans beats late arrival */
@@ -1146,50 +1259,90 @@ function initProfiles() {
   const open = () => { modal.hidden = false; };
   const close = () => { modal.hidden = true; };
 
-  const showProfile = guardId => {
-    const guard = GUARDS[guardId];
-    if (!guard) return;
+  const addressOf = account => [
+    account.street,
+    account.barangay || account.district,
+    account.city,
+    account.region,
+    account.country,
+    account.postal,
+  ].filter(Boolean).join(', ') || '—';
 
-    name.textContent = guard.name;
-    image.src = guard.image;
-    image.alt = `${guard.name} profile photo`;
-    status.textContent = `● ${guard.status}`;
+  const showAccountProfile = userId => {
+    const account = getStoredAccounts().find(item => item.userId === userId);
+    if (!account) return;
+    const record = attendanceStateFor(account);
+    const fullName = displayNameOf(account);
+    name.textContent = fullName;
+    const initials = fullName.split(/\s+/).map(word => word[0]).slice(0, 2).join('').toUpperCase() || 'SG';
+    const hue = simpleHash(account.userId) % 360;
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect width='96' height='96' rx='48' fill='hsl(${hue} 85% 94%)'/><text x='48' y='57' text-anchor='middle' font-size='28' font-weight='800' font-family='Arial' fill='hsl(${hue} 70% 36%)'>${escapeHtml(initials)}</text></svg>`;
+    image.src = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    image.alt = `${fullName} initials`;
+    image.style.display = '';
+    status.textContent = record.absent ? '● Absent today' : record.late ? '● Late today' : record.completed ? '● Shift completed' : '● On duty';
     details.className = 'profile-details';
 
     const fields = [
-      ['Guard ID', guard.id],
-      ['Assigned post', guard.post],
-      ['Assignment', guard.assignment],
-      ['Contact number', guard.phone],
-      ['Email address', guard.email],
-      ['Registration status', 'Verified guard'],
+      ['Guard ID', account.userId],
+      ['Assigned post', currentPostLabelOf(account)],
+      ['Department', account.department || 'Security'],
+      ['Time in', record.timeIn || '—'],
+      ['Time out', record.timeOut || '—'],
+      ['Contact number', account.phone ? formatPhone(account.phone) : '—'],
+      ['Email address', account.email || '—'],
+      ['Home address', addressOf(account)],
     ];
 
     details.innerHTML = fields
-      .map(([label, value]) => `<div class="profile-detail"><span>${label}</span><strong>${value}</strong></div>`)
+      .map(([label, value]) => `<div class="profile-detail"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`)
       .join('');
     open();
   };
 
   const showAll = () => {
-    name.textContent = 'Registered guards';
+    const accounts = activeSecurityAccounts();
+    name.textContent = 'Registered guard accounts';
     image.src = '../images/1568-logo-1781901055.317-00a3e4-color.webp';
+    image.style.display = '';
     image.alt = 'Sentry logo';
-    status.textContent = `${Object.keys(GUARDS).length} guard records`;
+    status.textContent = `${accounts.length} approved Security account${accounts.length === 1 ? '' : 's'}`;
     details.className = 'profile-details all-guards';
 
-    details.innerHTML = Object.values(GUARDS)
-      .map(guard => `
+    details.innerHTML = accounts.length
+      ? accounts.map(account => `
         <div class="guard-summary">
-          <img src="${guard.image}" alt="">
-          <div><strong>${guard.name}</strong><small>${guard.id} · ${guard.post}</small></div>
-        </div>`)
-      .join('');
+          <div class="avatar initials generated-avatar">${escapeHtml(displayNameOf(account).split(/\s+/).map(word => word[0]).slice(0, 2).join('').toUpperCase() || 'SG')}</div>
+          <div><strong>${escapeHtml(displayNameOf(account))}</strong><small>${escapeHtml(account.userId)} · ${escapeHtml(currentPostLabelOf(account))}</small></div>
+        </div>`).join('')
+      : '<div class="empty-pending">No approved Security accounts yet.</div>';
     open();
   };
 
-  $$('.profile-button').forEach(button => button.addEventListener('click', () => showProfile(button.dataset.guard)));
-  $('#viewAll').addEventListener('click', showAll);
+  const openAttendanceLogs = () => {
+    const records = collectTodayAttendance();
+    const columns = ['Guard name', 'Guard ID', 'Assigned post', 'Time in', 'Time out', 'Status'];
+    $('#hrReportPrint').hidden = true;
+    $('#hrReportTitle').textContent = 'Attendance logs';
+    $('#hrReportDate').textContent = selectedAttendanceDate.toLocaleDateString('en-PH', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    });
+    $('#hrReportHead').innerHTML = columns.map(col => `<th>${escapeHtml(col).toUpperCase()}</th>`).join('');
+    $('#hrReportBody').innerHTML = records.length
+      ? records.map(record => {
+          const statusLabel = record.absent ? 'Absent' : record.late ? 'Late' : record.completed ? 'Completed' : 'On duty';
+          return `<tr><td><strong>${escapeHtml(record.name)}</strong></td><td>${escapeHtml(record.id)}</td><td>${escapeHtml(currentPostLabelOf(record.account))}</td><td>${escapeHtml(record.timeIn || '—')}</td><td>${escapeHtml(record.timeOut || '—')}</td><td>${escapeHtml(statusLabel)}</td></tr>`;
+        }).join('')
+      : '<tr><td class="empty-pending" colspan="6">No approved Security guard accounts are available for this date.</td></tr>';
+    $('#hrReportModal').hidden = false;
+  };
+
+  $('#staffTrack').addEventListener('click', event => {
+    const button = event.target.closest('.profile-button');
+    if (!button) return;
+    showAccountProfile(button.dataset.userId);
+  });
+  $('#viewAll').addEventListener('click', openAttendanceLogs);
   $('#closeProfile').addEventListener('click', close);
   closeWhenBackdropIsClicked(modal, close);
 
@@ -1445,6 +1598,7 @@ function initWorkspace(toast, profiles) {
     renderUserAccounts();
     renderActiveAccountsPage(activeAccountsPage.hidden ? '' : activeAccountsSearch.value);
     renderManageAccountsPage(manageAccountsPage.hidden ? '' : manageAccountsSearch.value);
+    renderAttendanceBoard();
     updateSystemCounts();
   };
 
@@ -1484,14 +1638,10 @@ function initWorkspace(toast, profiles) {
 
   const renderGuardDirectory = (query = '') => {
     const needle = query.trim().toLowerCase();
-    const entries = Object.values(GUARDS).map(guard => ({
-      name: guard.name, id: guard.id, post: guard.post,
-      sub: guard.assignment, contact: formatPhone(guard.phone),
-      image: guard.image, status: directoryStatusOf(guard.name),
-    }));
+    const entries = [];
 
     getStoredAccounts()
-      .filter(account => account.status === 'Active')
+      .filter(account => account.status === 'Active' && account.department === 'Security')
       .forEach(account => {
         const name = displayNameOf(account);
         const tint = DIRECTORY_AVATARS[name.length % DIRECTORY_AVATARS.length];
@@ -1533,7 +1683,7 @@ function initWorkspace(toast, profiles) {
 
   const renderPersonnelList = (query = '') => {
     const needle = query.trim().toLowerCase();
-    const staff = getStoredAccounts().filter(account => account.status === 'Active');
+    const staff = activeSecurityAccounts();
     const matches = staff.filter(account =>
       !needle || `${displayNameOf(account)} ${account.userId} ${account.post || ''}`.toLowerCase().includes(needle));
     $('#personnelCount').textContent = `${staff.length} staff guards · ${matches.length} shown`;
@@ -1613,6 +1763,7 @@ function initWorkspace(toast, profiles) {
         ? 'No QR scans recorded today yet.'
         : 'No exceptions today — every guard scanned on time.',
     };
+    $('#hrReportPrint').hidden = false;
     $('#hrReportTitle').textContent = `${currentReport.title} — today`;
     $('#hrReportDate').textContent = new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     $('#hrReportHead').innerHTML = columns.map(col => `<th>${escapeHtml(col).toUpperCase()}</th>`).join('');
@@ -1634,11 +1785,9 @@ function initWorkspace(toast, profiles) {
 
   const renderEmployeeDirectory = (query = '') => {
     const needle = query.trim().toLowerCase();
-    const entries = Object.values(GUARDS).map(guard => ({
-      name: guard.name, id: guard.id, email: guard.email, contact: formatPhone(guard.phone), age: '—',
-    }));
+    const entries = [];
     getStoredAccounts()
-      .filter(account => account.status === 'Active')
+      .filter(account => account.status === 'Active' && account.department === 'Security')
       .forEach(account => {
         const age = ageOf(account);
         entries.push({
@@ -1725,7 +1874,7 @@ function initWorkspace(toast, profiles) {
   const renderEmployeeForm = action => `
     <form class="hr-form">
       <label>Employee
-        <select>${Object.values(GUARDS).map(guard => `<option>${guard.name} — ${guard.id}</option>`).join('')}</select>
+        <select>${activeSecurityAccounts().map(account => `<option>${escapeHtml(displayNameOf(account))} — ${escapeHtml(account.userId)}</option>`).join('') || '<option>No approved Security accounts</option>'}</select>
       </label>
       <label>${action === 'add' ? 'Employee name' : 'Update details'}
         <input required placeholder="Enter required information">
@@ -1796,12 +1945,19 @@ function initDashboard() {
 
   initAuthentication();
   initAddressCascade();
+  renderAttendanceBoard();
   initAttendance(toast);
   updateSystemCounts();
   initScanner();
   initCarousel();
   const profiles = initProfiles();
   initWorkspace(toast, profiles);
+  window.addEventListener('storage', event => {
+    if (event.key === USER_ACCOUNTS_KEY || event.key?.startsWith(MOBILE_TODAY_KEY_PREFIX)) {
+      renderAttendanceBoard();
+      updateSystemCounts();
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', initDashboard);
