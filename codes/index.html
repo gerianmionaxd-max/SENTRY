@@ -223,12 +223,15 @@
     <nav>
       <a href="#" class="nav-item active" id="attendanceNav"><span class="nav-icon"><img src="../images/logs.png" alt="" width="20" height="20"></span><b>Attendance</b></a>
       <a href="#" class="nav-item" id="hrPanelNav"><span class="nav-icon"><img src="../images/handshake.png" alt="" width="20" height="20"></span><b>HR Staff</b></a>
-      <a href="#" class="nav-item" id="payrollPanelNav"><span class="nav-icon"><img src="../images/hand-coins.png" alt="" width="20" height="20"></span><b>Payroll Staff</b></a>
-      <a href="#" class="nav-item" id="adminPanelNav"><span class="nav-icon"><img src="../images/user-shield.png" alt="" width="20" height="20"></span><b>Admin Analytics</b></a>
+      <a href="#" class="nav-item" id="payrollPanelNav"><span class="nav-icon"><img src="../images/hand-coins.png" alt="" width="20" height="20"></span><b>Payroll Management</b></a>
+      <a href="#" class="nav-item" id="adminPanelNav"><span class="nav-icon"><img src="../images/user-shield.png" alt="" width="20" height="20"></span><b>Administrator</b></a>
     </nav>
 
     <div class="sidebar-bottom">
-      <a href="#" class="nav-item"><span class="nav-icon"><img src="../images/sliders-horizontal.png" alt="" width="20" height="20"></span><b>Settings</b></a>
+      <button class="logout-button" id="logoutButton" type="button" aria-label="Log out of SENTRY">
+        <span class="logout-icon" aria-hidden="true">↪</span>
+        <b>Logout</b>
+      </button>
 
       <div class="admin">
         <div class="avatar mini"><img src="../images/461929387_2045606972540969_8604364621456449189_n.jpg" alt="Gerian Miona"></div>
@@ -267,7 +270,6 @@
           <h1>HR Staff Panel</h1>
           <p>Manage personnel records, attendance concerns, and operational requests.</p>
         </div>
-        <button class="hr-primary" id="addEmployee" type="button">+ Add employee</button>
       </div>
 
       <div class="hr-overview">
@@ -287,9 +289,9 @@
           <small>Awaiting administrator approval</small>
         </article>
         <article>
-          <span>Policy acknowledgements</span>
-          <strong>—</strong>
-          <small>No policy records yet</small>
+          <span>Policy updates</span>
+          <strong id="hrPendingPolicyCount">—</strong>
+          <small>Pending guard acknowledgements</small>
         </article>
       </div>
 
@@ -318,13 +320,6 @@
               </span>
             </button>
 
-            <button type="button">
-              <span class="task-icon violet"><img src="../images/bell.png" alt="" width="20" height="20"></span>
-              <span>
-                <strong>Policy updates</strong>
-                <small>Publish and track staff acknowledgements</small>
-              </span>
-            </button>
           </div>
         </article>
 
@@ -337,10 +332,14 @@
           </article>
 
           <article>
-            <h2>Requests awaiting review</h2>
-            <div class="request-row"><span>Payroll processing</span><b>05</b></div>
-            <div class="request-row"><span>Overtime / leave adjustments</span><b>03</b></div>
-            <button class="hr-link" type="button">View all requests →</button>
+            <h2>Policy Updates</h2>
+            <p>Publish updates and track guard acknowledgements.</p>
+            <div class="request-row"><span>Published policies</span><b id="policyUpdateCount">0</b></div>
+            <div class="request-row"><span>Pending acknowledgements</span><b id="policyPendingAckCount">0</b></div>
+            <div class="policy-card-actions">
+              <button class="hr-link" id="openPolicyCenter" type="button">View policy center →</button>
+              <button class="hr-link" id="publishPolicyUpdate" type="button">Publish update →</button>
+            </div>
           </article>
         </aside>
       </div>
@@ -353,8 +352,8 @@
           <p>All guard records, including approved staff accounts.</p>
         </div>
         <div class="directory-head-actions">
-          <div class="directory-search">⌕ <input id="guardDirectorySearch" placeholder="Search name, ID or post"></div>
           <button class="hr-primary" id="managePersonnelBtn" type="button">Manage Personnel</button>
+          <div class="directory-search">⌕ <input id="guardDirectorySearch" placeholder="Search name, ID or post"></div>
         </div>
       </div>
 
@@ -404,31 +403,30 @@
       <div class="hr-heading">
         <div>
           <p class="eyebrow">PAYROLL OPERATIONS</p>
-          <h1>Payroll Staff Panel</h1>
+          <h1>Manage Payroll</h1>
           <p>Process attendance-based pay, overtime, leave, and payroll reports.</p>
         </div>
-        <button class="hr-primary" id="createPayroll" type="button">+ Create payroll run</button>
       </div>
 
       <div class="hr-overview">
         <article>
+          <span>Salary profiles</span>
+          <strong id="payrollSalaryProfileCount">0</strong>
+          <small>Active guard salary records</small>
+        </article>
+        <article>
           <span>Validated attendance records</span>
-          <strong id="payrollValidatedCount">4</strong>
+          <strong id="payrollValidatedCount">0</strong>
           <small>QR records ready for processing</small>
         </article>
         <article>
-          <span>Overtime adjustments</span>
-          <strong>—</strong>
-          <small>No adjustments recorded</small>
-        </article>
-        <article>
-          <span>Leave adjustments</span>
-          <strong>—</strong>
-          <small>No adjustments recorded</small>
+          <span>Estimated payroll</span>
+          <strong id="payrollEstimatedTotal">₱0.00</strong>
+          <small id="payrollEstimateNote">Set salaries to estimate</small>
         </article>
         <article>
           <span>Payroll reports</span>
-          <strong>—</strong>
+          <strong id="payrollReportCount">—</strong>
           <small>No reports generated yet</small>
         </article>
       </div>
@@ -442,17 +440,26 @@
           </div>
 
           <div class="hr-task-list">
+            <button data-payroll-action="salary" type="button">
+              <span class="task-icon blue"><img src="../images/philippine-peso.png" alt="" width="20" height="20"></span>
+              <span>
+                <strong>Salary setup</strong>
+                <small>Set monthly salary, daily rate, allowances, and deductions</small>
+              </span>
+              <b><span id="payrollSalaryTaskCount">0</span> profiles →</b>
+            </button>
+
             <button data-payroll-action="validated" type="button">
-              <span class="task-icon blue">✓</span>
+              <span class="task-icon blue"><img src="../images/badge-check.png" alt="" width="20" height="20"></span>
               <span>
                 <strong>Validated attendance data</strong>
                 <small>Review approved time and attendance records</small>
               </span>
-              <b><span id="payrollTaskCount">4</span> records →</b>
+              <b><span id="payrollTaskCount">0</span> records →</b>
             </button>
 
             <button data-payroll-action="overtime" type="button">
-              <span class="task-icon amber">+</span>
+              <span class="task-icon amber"><img src="../images/rotate-ccw-clock.png" alt="" width="20" height="20"></span>
               <span>
                 <strong>Overtime / leave adjustments</strong>
                 <small>Apply approved changes to payroll totals</small>
@@ -461,7 +468,7 @@
             </button>
 
             <button data-payroll-action="reports" type="button">
-              <span class="task-icon violet">▤</span>
+              <span class="task-icon violet"><img src="../images/banknote-arrow-up.png" alt="" width="20" height="20"></span>
               <span>
                 <strong>Payroll-ready reports</strong>
                 <small>Generate a report for the current pay period</small>
@@ -471,20 +478,24 @@
           </div>
         </article>
 
-        <aside class="hr-side">
-          <article>
-            <h2>Current pay period</h2>
-            <p>01 Aug – 15 Aug 2026</p>
-            <div class="request-row"><span>Estimated payroll</span><b>—</b></div>
-            <div class="request-row"><span>Processing status</span><b>Not started</b></div>
-            <button class="hr-link" data-payroll-action="run" type="button">Review payroll run →</button>
-          </article>
-
-          <article>
-            <h2>Quick actions</h2>
-            <button class="hr-link" data-payroll-action="overtime" type="button">Manage adjustments →</button>
-            <br>
-            <button class="hr-link" data-payroll-action="reports" type="button">Download payroll report →</button>
+        <aside class="hr-side payroll-side">
+          <article class="payroll-period-card">
+            <div class="payroll-period-head">
+              <div>
+                <h2>Current pay period</h2>
+                <p id="payrollCurrentPeriod">Current month</p>
+              </div>
+              <button class="hr-link payroll-period-review" data-payroll-action="run" type="button">Review payroll run →</button>
+            </div>
+            <div class="request-row"><span>Estimated payroll</span><b id="payrollPeriodEstimate">₱0.00</b></div>
+            <div class="request-row"><span>Processing status</span><b id="payrollProcessingStatus">Set salaries first</b></div>
+            <div class="payroll-graph-card">
+              <div class="payroll-graph-head">
+                <strong>Current pay run</strong>
+                <span id="payrollGraphSummary">No active pay data</span>
+              </div>
+              <div class="payroll-graph" id="payrollRunGraph" aria-live="polite"></div>
+            </div>
           </article>
         </aside>
       </div>
@@ -495,17 +506,17 @@
       <div class="hr-heading">
         <div>
           <p class="eyebrow">ADMINISTRATOR VIEW</p>
-          <h1>Analytics Dashboard</h1>
+          <h1>Admin Dashboard</h1>
           <p>Monitor attendance performance, exceptions, and system activity.</p>
         </div>
-        <button class="hr-primary" id="exportAnalytics" type="button">Export summary</button>
+        <div class="admin-heading-actions"><button class="hr-primary secondary" id="adminPolicyCenter" type="button">Policy Updates</button></div>
       </div>
 
       <div class="hr-overview">
         <article>
           <span>Attendance rate</span>
           <strong id="adminAttendanceRate">60%</strong>
-          <small>3 of 5 guards on duty</small>
+          <small id="adminAttendanceNote">0 of 0 guards on duty</small>
         </article>
         <article>
           <span>On-duty coverage</span>
@@ -520,7 +531,7 @@
         <article>
           <span>QR verification</span>
           <strong id="adminVerificationRate">80%</strong>
-          <small>4 of 5 guards checked in</small>
+          <small id="adminVerificationNote">0 of 0 guards checked in</small>
         </article>
       </div>
 
@@ -558,12 +569,8 @@
             <h2>Attendance trend</h2>
             <p>Verified daily time-ins this week</p>
           </div>
-          <div class="bar-chart" aria-label="Attendance chart">
-            <div><i style="height:63%"></i><span>Mon</span></div>
-            <div><i style="height:78%"></i><span>Tue</span></div>
-            <div><i style="height:70%"></i><span>Wed</span></div>
-            <div><i style="height:88%"></i><span>Thu</span></div>
-            <div><i style="height:92%"></i><span>Fri</span></div>
+          <div class="bar-chart" id="adminAttendanceTrend" aria-label="Realtime attendance chart">
+            <div class="empty-pending">No attendance data yet.</div>
           </div>
         </article>
 
@@ -610,7 +617,7 @@
     <section class="guard-directory active-accounts-page" id="activeAccountsPage" hidden aria-label="Active account directory">
       <div class="directory-head">
         <div>
-          <button class="hr-back-link" id="backToAdminPanel" type="button">← Back to Admin Analytics</button>
+          <button class="hr-back-link" id="backToAdminPanel" type="button">← Back to Administrator</button>
           <h2>Active account directory <span id="activeAccountsPageCount">0</span></h2>
           <p>Complete registration details for approved user accounts only.</p>
         </div>
@@ -637,7 +644,7 @@
     <section class="guard-directory active-accounts-page" id="manageAccountsPage" hidden aria-label="Manage active and inactive accounts">
       <div class="directory-head">
         <div>
-          <button class="hr-back-link" id="backToAdminFromManage" type="button">← Back to Admin Analytics</button>
+          <button class="hr-back-link" id="backToAdminFromManage" type="button">← Back to Administrator</button>
           <h2>Manage accounts <span id="manageAccountsPageCount">0</span></h2>
           <p>View active and deactivated accounts, then deactivate or reactivate access.</p>
         </div>
@@ -780,25 +787,9 @@
             <button class="more">•••</button>
           </div>
 
-          <div class="class-item">
-            <div class="class-color cyan"></div>
-            <div><strong>Trinitarian Centre</strong><small>Afternoon shift · 03:00 PM</small></div>
-            <span>In 45m</span>
-          </div>
+          <div class="handover-list" id="shiftHandoverList"></div>
 
-          <div class="class-item">
-            <div class="class-color violet"></div>
-            <div><strong>Trinidad Complex</strong><small>Afternoon shift · 03:00 PM</small></div>
-            <span>In 45m</span>
-          </div>
-
-          <div class="class-item">
-            <div class="class-color orange"></div>
-            <div><strong>JTA Building</strong><small>Night shift · 10:00 PM</small></div>
-            <span>In 8h</span>
-          </div>
-
-          <button class="schedule">View deployment schedule <span>→</span></button>
+          <button class="schedule" id="viewDeploymentSchedule" type="button">View deployment schedule <span>→</span></button>
         </div>
       </aside>
 
@@ -859,7 +850,7 @@
         <p id="hrReportDate"></p>
         <div class="hr-report-actions">
           <div class="attendance-date-control" id="hrAttendanceDateControl">
-            <button class="date-button" id="attendanceDateButton" type="button"><span id="attendanceDateLabel">Sept. 21, 2026</span></button>
+            <button class="date-button" id="attendanceDateButton" type="button"><span id="attendanceDateLabel">View date</span></button>
             <div class="calendar-popover" id="attendanceCalendar" hidden>
               <div class="calendar-popover-head">
                 <button type="button" id="calendarPrevMonth" aria-label="Previous month">‹</button>
@@ -904,5 +895,5 @@
   <div class="toast" id="toast">QR scanner is ready to launch</div>
 
   <script src="script.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3e9e2f57a0f02ae',t:'MTc5MDAwMjI3MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3eb6000bec0e2fb',t:'MTc5MDAxNzg3OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

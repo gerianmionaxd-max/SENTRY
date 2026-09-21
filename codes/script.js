@@ -1,40 +1,15 @@
 /*
  * Sentry attendance dashboard interactions.
- * This is a client-side demo: form submissions only update the interface.
+ * Client-side SENTRY dashboard interactions.
  */
 
 
 /* ------------------------------------------------------------------
-   Static demo data
+   Static application data
 ------------------------------------------------------------------ */
 
-const GUARDS = {
-  ramon: {
-    name: 'Ramon Santos', id: 'SG-2024-0182', post: 'Trinitarian Centre',
-    assignment: 'Main Gate · Day shift', phone: '+63 917 555 0182',
-    email: 'ramon.santos@sentry.ph', status: 'On duty', image: '../images/SP.jpg',
-  },
-  ricardo: {
-    name: 'Ricardo Williams', id: 'SG-2024-0097', post: 'Trinidad Complex',
-    assignment: 'Lobby post · Day shift', phone: '+63 917 555 0097',
-    email: 'ricardo.williams@sentry.ph', status: 'On duty', image: '../images/RW.png',
-  },
-  leo: {
-    name: 'Leo Jimenez', id: 'SG-2024-0241', post: 'Macario-Catalina Building',
-    assignment: 'Gate post · Day shift', phone: '+63 917 555 0241',
-    email: 'leo.jimenez@sentry.ph', status: 'Late arrival', image: '../images/LJ.webp',
-  },
-  juan: {
-    name: 'Juan Flores', id: 'SG-2024-0064', post: 'Trinitarian Centre',
-    assignment: 'Loading Bay · Day shift', phone: '+63 917 555 0064',
-    email: 'juan.flores@sentry.ph', status: 'On duty', image: '../images/JF.png',
-  },
-  kevin: {
-    name: 'Kevin Silva', id: 'SG-2024-0156', post: 'JTA Building',
-    assignment: 'Perimeter post · Night shift', phone: '+63 917 555 0156',
-    email: 'kevin.silva@sentry.ph', status: 'Absent', image: '../images/KS.jpg',
-  },
-};
+const GUARDS = {};
+
 
 const HR_ACTIONS = {
   add: 'Add new guard / employee',
@@ -50,35 +25,15 @@ const HR_ACTIONS = {
 const PAYROLL_ACTIONS = {
   validated: 'Validated attendance data',
   overtime: 'Overtime and leave adjustments',
+  salary: 'Manage Guard Salaries',
   reports: 'Generate payroll-ready report',
   run: 'Review payroll run',
 };
 
-/* Demo record sets rendered inside the HR / payroll tool dialogs */
-const HR_ACTION_RECORDS = {
-  exceptions: [
-    ['Leo Jimenez', 'Late arrival · 07:41 AM'],
-    ['Kevin Silva', 'No QR scan recorded · Absent'],
-  ],
-  schedule: [
-    ['Ramon Santos', 'Trinitarian Centre · Day shift'],
-    ['Ricardo Williams', 'Trinidad Complex · Day shift'],
-    ['Kevin Silva', 'JTA Building · Night shift'],
-  ],
-};
+/* Empty by default: HR/payroll dialogs use real stored staff records only. */
+const HR_ACTION_RECORDS = {};
 
-const PAYROLL_ACTION_RECORDS = {
-  validated: [
-    ['Ramon Santos', '22 work days · 0.5 overtime hours'],
-    ['Ricardo Williams', '22 work days · 2 overtime hours'],
-    ['Juan Flores', '22 work days · 1 overtime hour'],
-  ],
-  overtime: [
-    ['Ricardo Williams', '2 overtime hours · Pending'],
-    ['Leo Jimenez', '1 leave day · Pending'],
-    ['Kevin Silva', 'Night differential · Pending'],
-  ],
-};
+const PAYROLL_ACTION_RECORDS = {};
 
 /* ------------------------------------------------------------------
    Composite address data: country -> region -> city -> barangay.
@@ -398,10 +353,14 @@ function saveStoredAccounts(accounts) {
 }
 
 /* Guard IDs look like SG-2026-0242: "SG", the registration year and a
-   4-digit user number that stays unique across demo and staff guards. */
+   4-digit user number that stays unique across staff guards. */
 const GUARD_ID_PATTERN = /^SG-(\d{4})-(\d{4})$/;
 const MOBILE_TODAY_KEY_PREFIX = 'sentryGuardToday_';
 const MOBILE_POSTS_KEY_PREFIX = 'sentryGuardPosts_';
+const ATTENDANCE_LOGS_KEY = 'sentryAttendanceLogs';
+const PAYROLL_SALARY_KEY = 'sentryGuardSalaryProfiles';
+const PAYROLL_RUNS_KEY = 'sentryPayrollRuns';
+const PAYROLL_ADJUSTMENTS_KEY = 'sentryPayrollAdjustments';
 
 function usedGuardNumbers(extraAccounts = []) {
   const used = new Set();
@@ -427,7 +386,7 @@ function registrationYearOf(account) {
 }
 
 /* One-time upgrade: legacy USR-<timestamp> ids become SG-YYYY-NNNN so old
-   staff accounts match the demo guard format. The guard's in-progress
+   staff accounts match the guard ID format. The guard's in-progress
    mobile day state moves to the new id when one exists. */
 function migrateStoredAccounts() {
   let accounts = readStoredList(USER_ACCOUNTS_KEY);
@@ -793,7 +752,14 @@ function initAuthentication() {
 ------------------------------------------------------------------ */
 
 let activeAttendanceFilter = 'all';
-let selectedAttendanceDate = new Date();
+const reportDates = {
+  'dashboard-attendance': new Date(),
+  'hr-attendance': new Date(),
+  exceptions: new Date(),
+};
+let activeReportDateMode = 'hr-attendance';
+let selectedAttendanceDate = new Date(reportDates[activeReportDateMode]);
+let calendarDraftDate = new Date(selectedAttendanceDate);
 let calendarViewDate = new Date(selectedAttendanceDate.getFullYear(), selectedAttendanceDate.getMonth(), 1);
 
 function dateInputValue(date) {
@@ -820,6 +786,15 @@ function updateAttendanceDateLabel() {
   if (label) label.textContent = formatAttendanceDate(selectedAttendanceDate);
 }
 
+function setReportDateMode(mode) {
+  activeReportDateMode = mode;
+  selectedAttendanceDate = new Date(reportDates[mode] || new Date());
+  calendarDraftDate = new Date(selectedAttendanceDate);
+  calendarViewDate = new Date(selectedAttendanceDate.getFullYear(), selectedAttendanceDate.getMonth(), 1);
+  updateAttendanceDateLabel();
+  renderAttendanceCalendar();
+}
+
 function renderAttendanceCalendar() {
   const calendar = $('#attendanceCalendar');
   if (!calendar) return;
@@ -836,7 +811,7 @@ function renderAttendanceCalendar() {
     const day = new Date(start);
     day.setDate(start.getDate() + index);
     const outside = day.getMonth() !== month;
-    const selected = sameCalendarDay(day, selectedAttendanceDate);
+    const selected = sameCalendarDay(day, calendarDraftDate);
     const today = sameCalendarDay(day, new Date());
     days.push(`<button type="button" class="calendar-day${outside ? ' outside' : ''}${selected ? ' selected' : ''}${today ? ' today' : ''}" data-date="${dateInputValue(day)}">${day.getDate()}</button>`);
   }
@@ -849,10 +824,12 @@ function closeAttendanceCalendar() {
 }
 
 function applyAttendanceCalendar(toast) {
+  selectedAttendanceDate = new Date(calendarDraftDate);
+  reportDates[activeReportDateMode] = new Date(calendarDraftDate);
   closeAttendanceCalendar();
   updateAttendanceDateLabel();
-  document.dispatchEvent(new CustomEvent('attendance-date-applied'));
-  toast(`Showing attendance logs for ${$('#attendanceDateLabel').textContent}`);
+  document.dispatchEvent(new CustomEvent('attendance-date-applied', { detail: { mode: activeReportDateMode } }));
+  toast(`Showing records for ${$('#attendanceDateLabel').textContent}`);
 }
 
 function initAttendance(toast) {
@@ -895,6 +872,7 @@ function initAttendance(toast) {
     dateButton.addEventListener('click', event => {
       event.stopPropagation();
       calendar.hidden = !calendar.hidden;
+      calendarDraftDate = new Date(selectedAttendanceDate);
       calendarViewDate = new Date(selectedAttendanceDate.getFullYear(), selectedAttendanceDate.getMonth(), 1);
       renderAttendanceCalendar();
     });
@@ -909,10 +887,11 @@ function initAttendance(toast) {
       renderAttendanceCalendar();
     });
     $('#calendarDays')?.addEventListener('click', event => {
+      event.stopPropagation();
       const button = event.target.closest('[data-date]');
       if (!button) return;
-      selectedAttendanceDate = parseDateInput(button.dataset.date);
-      calendarViewDate = new Date(selectedAttendanceDate.getFullYear(), selectedAttendanceDate.getMonth(), 1);
+      calendarDraftDate = parseDateInput(button.dataset.date);
+      calendarViewDate = new Date(calendarDraftDate.getFullYear(), calendarDraftDate.getMonth(), 1);
       renderAttendanceCalendar();
     });
     $('#calendarApply')?.addEventListener('click', event => {
@@ -932,6 +911,36 @@ function initAttendance(toast) {
 /* ------------------------------------------------------------------
    Live counters shared by every panel
 ------------------------------------------------------------------ */
+
+function startOfWeekMonday(date = new Date()) {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = start.getDay() || 7;
+  start.setDate(start.getDate() - day + 1);
+  return start;
+}
+
+function renderAdminAttendanceTrend() {
+  const chart = $('#adminAttendanceTrend');
+  if (!chart) return;
+  const start = startOfWeekMonday();
+  const days = Array.from({ length: 5 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    const records = collectTodayAttendance(date);
+    const count = records.filter(record => record.hasScan).length;
+    return { date, count };
+  });
+  const max = Math.max(...days.map(day => day.count), activeSecurityAccounts().length, 1);
+  const hasData = days.some(day => day.count > 0);
+  chart.innerHTML = days.map(day => {
+    const height = hasData ? Math.max(6, Math.round((day.count / max) * 100)) : 0;
+    return `<div class="trend-bar ${day.count ? '' : 'empty'}">
+      <b>${day.count}</b>
+      <i style="height:${height}%"></i>
+      <span>${day.date.toLocaleDateString('en-PH', { weekday: 'short' })}</span>
+    </div>`;
+  }).join('');
+}
 
 function updateSystemCounts() {
   const rows = $$('#attendanceRows tr[data-status]');
@@ -983,18 +992,20 @@ function updateSystemCounts() {
   setText('#hrPendingAccountCount', pendingAccounts);
 
   /* Payroll panel */
-  setText('#payrollValidatedCount', verified);
-  setText('#payrollTaskCount', verified);
+  updatePayrollDashboard();
 
   /* Admin panel */
   setText('#adminAttendanceRate', `${total ? Math.round((onDuty / total) * 100) : 0}%`);
+  setText('#adminAttendanceNote', `${onDuty} of ${total} guard${total === 1 ? '' : 's'} on duty`);
   setText('#adminOnDutyCount', onDuty);
-  setText('#adminCoverageNote', `Of ${total} current guards`);
+  setText('#adminCoverageNote', `Of ${total} current guard${total === 1 ? '' : 's'}`);
   setText('#adminExceptionCount', flaggedToday.length);
   setText('#adminExceptionNote', exceptionNote);
   setText('#adminVerificationRate', `${total ? Math.round((verified / total) * 100) : 0}%`);
+  setText('#adminVerificationNote', `${verified} of ${total} guard${total === 1 ? '' : 's'} checked in`);
   setText('#adminLateCount', lateToday);
   setText('#adminAbsentCount', absentToday);
+  renderAdminAttendanceTrend();
 }
 
 
@@ -1025,7 +1036,7 @@ function formatPhone(phone) {
 
 
 /* ------------------------------------------------------------------
-   Today's attendance: demo board rows + live mobile QR states.
+   Today's attendance: approved staff accounts + live mobile QR states.
    Day shift starts at 7:00 AM; time-ins after 7:30 AM count as late.
 ------------------------------------------------------------------ */
 
@@ -1063,16 +1074,48 @@ function simpleHash(text) {
   return Math.abs(hash);
 }
 
+function readAttendanceLogs() {
+  try { return JSON.parse(localStorage.getItem(ATTENDANCE_LOGS_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function saveAttendanceLogs(logs) {
+  localStorage.setItem(ATTENDANCE_LOGS_KEY, JSON.stringify(logs));
+}
+
+function rememberAttendanceLog(account, state) {
+  if (!state?.key || (!state.in && !state.out)) return;
+  const logs = readAttendanceLogs();
+  logs[state.key] = logs[state.key] || {};
+  logs[state.key][account.userId] = {
+    in: state.in || null,
+    out: state.out || null,
+    token: state.token || '',
+    post: account.post || '',
+    assignment: account.assignment || '',
+    savedAt: new Date().toISOString(),
+  };
+  saveAttendanceLogs(logs);
+}
+
+function storedAttendanceStateFor(account, key) {
+  const logs = readAttendanceLogs();
+  const saved = logs[key]?.[account.userId];
+  return saved ? { key, ...saved } : null;
+}
+
 function attendanceStateFor(account, date = selectedAttendanceDate) {
   const key = todayKeyLocal(date);
-  let state = null;
+  let liveState = null;
   try {
-    state = JSON.parse(localStorage.getItem(MOBILE_TODAY_KEY_PREFIX + account.userId) || 'null');
-  } catch { state = null; }
+    liveState = JSON.parse(localStorage.getItem(MOBILE_TODAY_KEY_PREFIX + account.userId) || 'null');
+  } catch { liveState = null; }
+  if (liveState?.key) rememberAttendanceLog(account, liveState);
 
-  const fresh = state && state.key === key;
-  const inDate = fresh && state.in ? new Date(state.in) : null;
-  const outDate = fresh && state.out ? new Date(state.out) : null;
+  const sameAsLive = liveState && liveState.key === key;
+  const state = sameAsLive ? liveState : storedAttendanceStateFor(account, key);
+  const inDate = state?.in ? new Date(state.in) : null;
+  const outDate = state?.out ? new Date(state.out) : null;
   const validIn = inDate && !Number.isNaN(inDate.getTime());
   const validOut = outDate && !Number.isNaN(outDate.getTime());
   const late = !!validIn && minutesOfDay(inDate) > SHIFT_START_MINUTES + LATE_GRACE_MINUTES;
@@ -1081,8 +1124,8 @@ function attendanceStateFor(account, date = selectedAttendanceDate) {
     account,
     name: displayNameOf(account),
     id: account.userId,
-    post: account.post || account.department || 'Security',
-    assignment: account.post ? (account.assignment || account.department || 'Security') : 'Not yet assigned',
+    post: state?.post || account.post || account.department || 'Security',
+    assignment: state?.assignment || (account.post ? (account.assignment || account.department || 'Security') : 'Not yet assigned'),
     timeIn: validIn ? timeLabelOf(inDate) : '',
     timeOut: validOut ? timeLabelOf(outDate) : '',
     late,
@@ -1094,7 +1137,7 @@ function attendanceStateFor(account, date = selectedAttendanceDate) {
 }
 
 /* One record per approved Security guard for the selected date. The time-in/out
-   values come from the same localStorage keys written by the mobile QR demo. */
+   values come from the same localStorage keys written by the mobile QR app. */
 function collectTodayAttendance(date = new Date()) {
   const records = activeSecurityAccounts().map(account => attendanceStateFor(account, date));
   records.forEach(record => {
@@ -1104,6 +1147,217 @@ function collectTodayAttendance(date = new Date()) {
     record.exception = record.absent || record.late || record.missedIn || record.missedOut;
   });
   return records;
+}
+
+function money(amount) {
+  return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(amount) || 0);
+}
+
+function readSalaryProfiles() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PAYROLL_SALARY_KEY) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch { return {}; }
+}
+
+function saveSalaryProfiles(profiles) {
+  localStorage.setItem(PAYROLL_SALARY_KEY, JSON.stringify(profiles));
+}
+
+function salaryProfileFor(account) {
+  const profiles = readSalaryProfiles();
+  return profiles[account.userId] || null;
+}
+
+function normalizedSalaryProfile(account, raw = {}) {
+  const monthlySalary = Math.max(0, Number(raw.monthlySalary) || 0);
+  const workingDays = Math.max(1, Number(raw.workingDays) || 26);
+  const shiftHours = Math.max(1, Number(raw.shiftHours) || 8);
+  const overtimeMultiplier = Math.max(1, Number(raw.overtimeMultiplier) || 1.25);
+  const allowances = Math.max(0, Number(raw.allowances) || 0);
+  const deductions = Math.max(0, Number(raw.deductions) || 0);
+  const dailyRate = monthlySalary / workingDays;
+  const hourlyRate = dailyRate / shiftHours;
+  return {
+    userId: account.userId,
+    monthlySalary,
+    workingDays,
+    shiftHours,
+    overtimeMultiplier,
+    allowances,
+    deductions,
+    dailyRate,
+    hourlyRate,
+    overtimeRate: hourlyRate * overtimeMultiplier,
+    effectiveDate: raw.effectiveDate || today(),
+    status: raw.status || 'Active',
+    updatedAt: raw.updatedAt || new Date().toISOString(),
+  };
+}
+
+function currentPayrollPeriod() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return { start, end, label: `${start.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}` };
+}
+
+function daysBetween(start, end) {
+  const days = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  while (cursor <= last) {
+    days.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return days;
+}
+
+function attendanceDurationHours(account, date) {
+  const key = todayKeyLocal(date);
+  const state = storedAttendanceStateFor(account, key);
+  if (!state?.in || !state?.out) return 0;
+  const start = new Date(state.in);
+  const end = new Date(state.out);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return 0;
+  return (end - start) / 36e5;
+}
+
+function readPayrollAdjustments() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PAYROLL_ADJUSTMENTS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function savePayrollAdjustments(adjustments) {
+  localStorage.setItem(PAYROLL_ADJUSTMENTS_KEY, JSON.stringify(adjustments));
+}
+
+function payrollAdjustmentEffect(account, profile, start, end) {
+  const adjustments = readPayrollAdjustments().filter(item => {
+    if (item.userId !== account.userId) return false;
+    const stamp = new Date(item.date || item.createdAt || Date.now());
+    return !Number.isNaN(stamp.getTime()) && stamp >= start && stamp <= end;
+  });
+  return adjustments.reduce((total, item) => {
+    const amount = Number(item.amount) || 0;
+    switch (item.type) {
+      case 'Overtime hours': return total + (profile ? amount * profile.overtimeRate : 0);
+      case 'Paid leave': return total + (item.unit === 'amount' || (!item.unit && amount > 31) ? amount : (profile ? amount * profile.dailyRate : 0));
+      case 'Unpaid leave': return total - (item.unit === 'amount' || (!item.unit && amount > 31) ? amount : (profile ? amount * profile.dailyRate : 0));
+      case 'Bonus': return total + amount;
+      case 'Cash advance':
+      case 'Other deduction': return total - amount;
+      default: return total;
+    }
+  }, 0);
+}
+
+function adjustmentCountForPeriod(start, end) {
+  return readPayrollAdjustments().filter(item => {
+    const stamp = new Date(item.date || item.createdAt || Date.now());
+    return !Number.isNaN(stamp.getTime()) && stamp >= start && stamp <= end;
+  }).length;
+}
+
+function payrollRowsForPeriod(start = currentPayrollPeriod().start, end = new Date()) {
+  const profiles = readSalaryProfiles();
+  const days = daysBetween(start, end);
+  return activeSecurityAccounts().map(account => {
+    const profile = profiles[account.userId] ? normalizedSalaryProfile(account, profiles[account.userId]) : null;
+    let paidDays = 0;
+    let absentDays = 0;
+    let lateMinutes = 0;
+    let overtimeHours = 0;
+    let validatedRecords = 0;
+    days.forEach(day => {
+      const record = attendanceStateFor(account, day);
+      if (record.hasScan) validatedRecords += 1;
+      if (record.hasScan && !record.missedIn) paidDays += 1;
+      else absentDays += 1;
+      if (record.late) {
+        const state = storedAttendanceStateFor(account, todayKeyLocal(day));
+        const inDate = state?.in ? new Date(state.in) : null;
+        if (inDate && !Number.isNaN(inDate.getTime())) {
+          lateMinutes += Math.max(0, minutesOfDay(inDate) - SHIFT_START_MINUTES - LATE_GRACE_MINUTES);
+        }
+      }
+      const duration = attendanceDurationHours(account, day);
+      if (profile && duration > profile.shiftHours) overtimeHours += duration - profile.shiftHours;
+    });
+    const basicPay = profile ? paidDays * profile.dailyRate : 0;
+    const overtimePay = profile ? overtimeHours * profile.overtimeRate : 0;
+    const lateDeduction = profile ? (lateMinutes / 60) * profile.hourlyRate : 0;
+    const allowancePay = profile ? (profile.allowances * Math.min(paidDays, profile.workingDays) / profile.workingDays) : 0;
+    const adjustmentPay = profile ? payrollAdjustmentEffect(account, profile, start, end) : 0;
+    const positiveAdjustments = Math.max(0, adjustmentPay);
+    const negativeAdjustments = Math.abs(Math.min(0, adjustmentPay));
+    const grossPay = basicPay + overtimePay + allowancePay + positiveAdjustments;
+    const totalDeductions = lateDeduction + (profile?.deductions || 0) + negativeAdjustments;
+    const netPay = Math.max(0, grossPay - totalDeductions);
+    return { account, profile, paidDays, absentDays, lateMinutes, overtimeHours, validatedRecords, basicPay, overtimePay, allowancePay, adjustmentPay, positiveAdjustments, negativeAdjustments, lateDeduction, totalDeductions, grossPay, netPay };
+  });
+}
+
+function payrollSummary() {
+  const period = currentPayrollPeriod();
+  const effectiveEnd = new Date(Math.min(new Date().getTime(), period.end.getTime()));
+  const rows = payrollRowsForPeriod(period.start, effectiveEnd);
+  return {
+    period,
+    rows,
+    profileCount: rows.filter(row => row.profile).length,
+    guardCount: rows.length,
+    validated: rows.reduce((sum, row) => sum + row.validatedRecords, 0),
+    estimated: rows.reduce((sum, row) => sum + row.netPay, 0),
+    missingProfiles: rows.filter(row => !row.profile).length,
+    adjustmentCount: adjustmentCountForPeriod(period.start, effectiveEnd),
+    reportCount: readStoredList(PAYROLL_RUNS_KEY).length,
+  };
+}
+
+function renderPayrollRunGraph(summary) {
+  const graph = $('#payrollRunGraph');
+  const label = $('#payrollGraphSummary');
+  if (!graph) return;
+  const rows = summary.rows || [];
+  if (!rows.length) {
+    graph.innerHTML = '<div class="payroll-graph-empty">No approved Security guards yet.</div>';
+    if (label) label.textContent = 'No active pay data';
+    return;
+  }
+  const maxPay = Math.max(...rows.map(row => row.netPay), 1);
+  const totalPaidDays = rows.reduce((sum, row) => sum + row.paidDays, 0);
+  if (label) label.textContent = `${rows.length} guard${rows.length === 1 ? '' : 's'} · ${totalPaidDays} paid day${totalPaidDays === 1 ? '' : 's'}`;
+  graph.innerHTML = rows.map(row => {
+    const percent = row.netPay > 0 ? Math.max(8, Math.round((row.netPay / maxPay) * 100)) : 0;
+    const missing = !row.profile;
+    return `<div class="payroll-graph-row ${missing ? 'missing' : ''}">
+      <div class="payroll-graph-meta">
+        <strong>${escapeHtml(displayNameOf(row.account))}</strong>
+        <span>${missing ? 'Salary profile needed' : `${row.paidDays} paid · ${row.absentDays} absent`}</span>
+      </div>
+      <div class="payroll-graph-track"><span style="width:${percent}%"></span></div>
+      <b>${money(row.netPay)}</b>
+    </div>`;
+  }).join('');
+}
+
+function updatePayrollDashboard() {
+  const summary = payrollSummary();
+  const setText = (selector, value) => { const element = $(selector); if (element) element.textContent = value; };
+  setText('#payrollCurrentPeriod', summary.period.label);
+  setText('#payrollSalaryProfileCount', summary.profileCount);
+  setText('#payrollSalaryTaskCount', summary.profileCount);
+  setText('#payrollValidatedCount', summary.validated);
+  setText('#payrollTaskCount', summary.validated);
+  setText('#payrollEstimatedTotal', money(summary.estimated));
+  setText('#payrollPeriodEstimate', money(summary.estimated));
+  setText('#payrollEstimateNote', summary.missingProfiles ? `${summary.missingProfiles} guard${summary.missingProfiles === 1 ? '' : 's'} need salary setup` : 'Ready for payroll run');
+  setText('#payrollProcessingStatus', summary.guardCount && !summary.missingProfiles ? 'Ready to review' : 'Set salaries first');
+  setText('#payrollReportCount', summary.reportCount || '—');
+  renderPayrollRunGraph(summary);
 }
 
 function renderAttendanceBoard() {
@@ -1132,6 +1386,7 @@ function renderAttendanceBoard() {
     : '<tr><td class="empty-pending" colspan="5">No approved Security guard accounts are available for attendance tracking.</td></tr>';
 
   renderStaffCarousel(records);
+  renderShiftHandovers(records);
 
   const activeButton = $(`.filter[data-filter="${activeAttendanceFilter}"]`) || $('.filter[data-filter="all"]');
   $$('.filter').forEach(filter => filter.classList.toggle('active', filter === activeButton));
@@ -1168,6 +1423,76 @@ function renderStaffCarousel(records = collectTodayAttendance()) {
       <button class="profile-button" data-user-id="${escapeHtml(record.id)}" type="button">View profile</button>
     </article>`;
   }).join('');
+}
+
+function handoverTimeFor(record) {
+  const text = `${record.assignment || ''} ${record.post || ''}`.toLowerCase();
+  return text.includes('night') ? '10:00 PM' : '03:00 PM';
+}
+
+function handoverStatusOf(record) {
+  if (!record.account.post) return { label: 'Needs post', tone: 'warning', detail: 'No location assigned' };
+  if (record.absent) return { label: 'Needs time-in', tone: 'danger', detail: 'No QR scan yet' };
+  if (record.late) return { label: 'Late', tone: 'warning', detail: 'Late arrival recorded' };
+  if (record.completed) return { label: 'Completed', tone: 'done', detail: 'Shift completed' };
+  return { label: 'On duty', tone: 'ready', detail: 'Guard is currently deployed' };
+}
+
+function renderShiftHandovers(records = collectTodayAttendance()) {
+  const list = $('#shiftHandoverList');
+  if (!list) return;
+
+  const guards = records.filter(record => record.account.status === 'Active');
+  if (!guards.length) {
+    list.innerHTML = '<div class="class-item empty-handover"><div><strong>No active deployments</strong><small>Approved Security accounts will appear here.</small></div></div>';
+    return;
+  }
+
+  list.innerHTML = guards.map((record, index) => {
+    const status = handoverStatusOf(record);
+    const color = ['cyan', 'violet', 'orange'][index % 3];
+    const post = record.account.post || 'Unassigned post';
+    const guardLine = record.account.post
+      ? `${record.name} · ${record.assignment || record.account.department || 'Security'}`
+      : `${record.name} · Assign a location in HR`;
+    return `<div class="class-item handover-item ${status.tone}">
+      <div class="class-color ${color}"></div>
+      <div><strong>${escapeHtml(post)}</strong><small>${escapeHtml(guardLine)}</small></div>
+      <span><b>${escapeHtml(status.label)}</b><small>${escapeHtml(status.detail)} · ${handoverTimeFor(record)}</small></span>
+    </div>`;
+  }).join('');
+}
+
+function openDeploymentSchedule() {
+  const records = collectTodayAttendance();
+  const columns = ['Post', 'Current guard', 'Shift / assignment', 'Time in', 'Time out', 'Handover status'];
+  $('#hrReportModal').dataset.reportMode = 'deployment-schedule';
+  $('#hrReportPrint').hidden = true;
+  if ($('#hrAttendanceDateControl')) $('#hrAttendanceDateControl').hidden = true;
+  $('#hrReportTitle').textContent = 'Deployment Schedule';
+  $('#hrReportDate').textContent = new Date().toLocaleDateString('en-PH', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
+  $('#hrReportHead').innerHTML = columns.map(col => `<th>${escapeHtml(col).toUpperCase()}</th>`).join('');
+  $('#hrReportBody').innerHTML = records.length
+    ? records.map(record => {
+        const status = handoverStatusOf(record);
+        return `<tr>
+          <td><strong>${escapeHtml(record.account.post || 'Unassigned post')}</strong></td>
+          <td>${escapeHtml(record.name)}<br><small>${escapeHtml(record.id)}</small></td>
+          <td>${escapeHtml(record.assignment || record.account.department || 'Security')}</td>
+          <td>${escapeHtml(record.timeIn || '—')}</td>
+          <td>${escapeHtml(record.timeOut || '—')}</td>
+          <td><span class="handover-pill ${status.tone}">${escapeHtml(status.label)}</span><br><small>${escapeHtml(status.detail)}</small></td>
+        </tr>`;
+      }).join('')
+    : '<tr><td class="empty-pending" colspan="6">No active Security accounts are available for deployment.</td></tr>';
+  $('#hrReportModal').hidden = false;
+}
+
+function initShiftHandovers() {
+  renderShiftHandovers();
+  $('#viewDeploymentSchedule')?.addEventListener('click', openDeploymentSchedule);
 }
 
 /* Primary issue per row: absent beats missed scans beats late arrival */
@@ -1341,9 +1666,11 @@ function initProfiles() {
     status.textContent = record.absent ? '● Absent today' : record.late ? '● Late today' : record.completed ? '● Shift completed' : '● On duty';
     details.className = 'profile-details';
 
+    const currentStatus = record.absent ? 'Absent / no scan' : record.late ? 'Late arrival' : record.completed ? 'Shift completed' : 'On duty';
     const fields = [
       ['Guard ID', account.userId],
-      ['Assigned post', currentPostLabelOf(account)],
+      ['Current status', currentStatus],
+      ['Deployed post', currentPostLabelOf(account)],
       ['Department', account.department || 'Security'],
       ['Time in', record.timeIn || '—'],
       ['Time out', record.timeOut || '—'],
@@ -1378,14 +1705,15 @@ function initProfiles() {
   };
 
   const openAttendanceLogs = () => {
-    const records = collectTodayAttendance(selectedAttendanceDate);
+    const currentActivityDate = new Date();
+    const records = collectTodayAttendance(currentActivityDate);
     const columns = ['Guard name', 'Guard ID', 'Assigned post', 'Time in', 'Time out', 'Status'];
     $('#hrReportModal').dataset.reportMode = 'dashboard-attendance';
     $('#hrReportPrint').hidden = true;
-    $('#hrAttendanceDateControl').hidden = false;
-    updateAttendanceDateLabel();
+    if ($('#hrAttendanceDateControl')) $('#hrAttendanceDateControl').hidden = true;
+    closeAttendanceCalendar();
     $('#hrReportTitle').textContent = 'Attendance Logs';
-    $('#hrReportDate').textContent = selectedAttendanceDate.toLocaleDateString('en-PH', {
+    $('#hrReportDate').textContent = currentActivityDate.toLocaleDateString('en-PH', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     });
     $('#hrReportHead').innerHTML = columns.map(col => `<th>${escapeHtml(col).toUpperCase()}</th>`).join('');
@@ -1404,19 +1732,38 @@ function initProfiles() {
     showAccountProfile(button.dataset.userId);
   });
   $('#viewAll').addEventListener('click', openAttendanceLogs);
-  document.addEventListener('attendance-date-applied', () => {
-    if (!$('#hrReportModal').hidden && $('#hrReportModal').dataset.reportMode === 'dashboard-attendance') openAttendanceLogs();
-  });
   $('#closeProfile').addEventListener('click', close);
   closeWhenBackdropIsClicked(modal, close);
 
-  return { showAll };
+  return { showAll, showAccountProfile };
 }
 
 
 /* ------------------------------------------------------------------
    Workspace switching, account approvals and tool dialogs
 ------------------------------------------------------------------ */
+
+function downloadPayrollCsv() {
+  const summary = payrollSummary();
+  const headers = ['Guard','Guard ID','Paid days','Absent days','Overtime hours','Late minutes','Allowance pay','Adjustments','Gross pay','Total deductions','Net pay'];
+  const lines = [headers.join(',')];
+  summary.rows.forEach(row => {
+    lines.push([
+      displayNameOf(row.account), row.account.userId, row.paidDays, row.absentDays,
+      row.overtimeHours.toFixed(2), Math.round(row.lateMinutes), row.allowancePay.toFixed(2),
+      row.adjustmentPay.toFixed(2), row.grossPay.toFixed(2), row.totalDeductions.toFixed(2), row.netPay.toFixed(2),
+    ].map(value => `"${String(value).replace(/"/g, '""')}"`).join(','));
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `sentry-payroll-${today()}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
 function initWorkspace(toast, profiles) {
   const sections = {
@@ -1567,10 +1914,101 @@ function initWorkspace(toast, profiles) {
 
   const manageAccountActionHtml = account => {
     const id = escapeHtml(account.userId);
-    if (account.status === 'Active') {
-      return `<button class="reject-account" data-account-action="deactivate" data-user-id="${id}" type="button">Deactivate</button>`;
-    }
-    return `<button class="approve-account" data-account-action="activate" data-user-id="${id}" type="button">Reactivate</button>`;
+    return `<button class="manage-account-btn" data-account-manage="${id}" type="button">Manage</button>`;
+  };
+
+  const accountEditFormHtml = account => {
+    const countries = Object.keys(ADDRESS_DATA);
+    const regions = account.country && ADDRESS_DATA[account.country] ? Object.keys(ADDRESS_DATA[account.country]) : [];
+    const cities = account.country && account.region && ADDRESS_DATA[account.country]?.[account.region]
+      ? Object.keys(ADDRESS_DATA[account.country][account.region]) : [];
+    const barangays = account.country && account.region && account.city && Array.isArray(ADDRESS_DATA[account.country]?.[account.region]?.[account.city])
+      ? ADDRESS_DATA[account.country][account.region][account.city] : [];
+    const option = (value, selected) => `<option value="${escapeHtml(value)}"${value === selected ? ' selected' : ''}>${escapeHtml(value)}</option>`;
+    return `
+      <form class="account-manage-form" id="manageAccountForm" data-user-id="${escapeHtml(account.userId)}">
+        <div class="account-manage-grid">
+          <label>First name<input name="firstName" required value="${escapeHtml(account.firstName || '')}"></label>
+          <label>Last name<input name="lastName" required value="${escapeHtml(account.lastName || '')}"></label>
+          <label>Middle name <span>Optional</span><input name="middleName" value="${escapeHtml(account.middleName || '')}"></label>
+          <label>Gender<select name="gender" required>
+            <option value="">Select gender</option>${['Male','Female','Other','Prefer not to say'].map(item => option(item, account.gender || '')).join('')}
+          </select></label>
+          <label>Birthday<input name="birthDate" type="date" value="${escapeHtml(account.birthDate || account.birthday || '')}"></label>
+          <label>Phone number<input name="phone" required value="${escapeHtml(account.phone || '')}" placeholder="+63 917 555 0182"></label>
+          <label>Country<select name="country" data-edit-country required>
+            <option value="">Select country</option>${countries.map(country => option(country, account.country || '')).join('')}
+          </select></label>
+          <label>Region / State<select name="region" data-edit-region>
+            <option value="">${regions.length ? 'Select region' : 'Select a country first'}</option>${regions.map(region => option(region, account.region || '')).join('')}
+          </select></label>
+          <label>City / Municipality<select name="city" data-edit-city>
+            <option value="">${cities.length ? 'Select city' : 'Select a region first'}</option>${cities.map(city => option(city, account.city || '')).join('')}
+          </select></label>
+          <label>Barangay<select name="barangay" data-edit-barangay>
+            <option value="">${barangays.length ? 'Select barangay' : 'Select a city first'}</option>${barangays.map(barangay => option(barangay, account.barangay || '')).join('')}
+          </select></label>
+          <label class="wide">Street / House no.<input name="street" required value="${escapeHtml(account.street || '')}"></label>
+          <label>Postal code<input name="postal" value="${escapeHtml(account.postal || '')}"></label>
+          <label>Department<select name="department" required>
+            <option value="">Select department</option>${Object.keys(DEPARTMENT_ACCESS).map(dept => option(dept, account.department || '')).join('')}
+          </select></label>
+          <label>Email address<input name="email" type="email" required value="${escapeHtml(account.email || '')}"></label>
+          <label class="wide">Password<input name="password" minlength="6" maxlength="12" required value="${escapeHtml(account.password || '')}"></label>
+        </div>
+        <div class="account-manage-actions">
+          <button class="${account.status === 'Active' ? 'reject-account' : 'approve-account'} account-status-action" data-account-modal-action="${account.status === 'Active' ? 'deactivate' : 'activate'}" type="button">${account.status === 'Active' ? 'Deactivate Account' : 'Reactivate Account'}</button>
+          <button class="hr-primary account-save-btn" type="submit">Save Changes</button>
+          <button class="account-delete-btn" data-account-modal-action="delete" type="button">Delete Account</button>
+        </div>
+      </form>`;
+  };
+
+  const updateEditAddressOptions = form => {
+    const country = form.querySelector('[data-edit-country]')?.value || '';
+    const regionSelect = form.querySelector('[data-edit-region]');
+    const citySelect = form.querySelector('[data-edit-city]');
+    const barangaySelect = form.querySelector('[data-edit-barangay]');
+    const fill = (select, items, placeholder, keep = '') => {
+      if (!select) return;
+      const selected = items.includes(keep) ? keep : '';
+      select.innerHTML = `<option value="">${placeholder}</option>${items.map(item => `<option value="${escapeHtml(item)}"${item === selected ? ' selected' : ''}>${escapeHtml(item)}</option>`).join('')}`;
+    };
+    const regions = country && ADDRESS_DATA[country] ? Object.keys(ADDRESS_DATA[country]) : [];
+    fill(regionSelect, regions, regions.length ? 'Select region' : 'Select a country first', regionSelect?.value || '');
+    const region = regionSelect?.value || '';
+    const cities = country && region && ADDRESS_DATA[country]?.[region] ? Object.keys(ADDRESS_DATA[country][region]) : [];
+    fill(citySelect, cities, cities.length ? 'Select city' : 'Select a region first', citySelect?.value || '');
+    const city = citySelect?.value || '';
+    const barangays = country && region && city && Array.isArray(ADDRESS_DATA[country]?.[region]?.[city]) ? ADDRESS_DATA[country][region][city] : [];
+    fill(barangaySelect, barangays, barangays.length ? 'Select barangay' : 'Select a city first', barangaySelect?.value || '');
+  };
+
+  const openManageAccountModal = userId => {
+    const account = getStoredAccounts().find(item => item.userId === userId);
+    if (!account) return toast('Account record was not found.');
+    actionTitle.textContent = 'Manage Account';
+    actionDescription.textContent = 'Edit user information, deactivate/reactivate access, or permanently delete this account.';
+    actionContent.innerHTML = accountEditFormHtml(account);
+    actionModal.hidden = false;
+  };
+
+  const confirmDeleteAccount = userId => {
+    const account = getStoredAccounts().find(item => item.userId === userId);
+    if (!account) return toast('Account record was not found.');
+    actionTitle.textContent = 'Delete Account';
+    actionDescription.textContent = 'Confirm before permanently removing this user account and its linked stored data.';
+    actionContent.innerHTML = `
+      <form class="hr-form account-delete-confirm" id="deleteAccountForm" data-user-id="${escapeHtml(account.userId)}">
+        <div class="policy-delete-warning">
+          <strong>${escapeHtml(displayNameOf(account))}</strong>
+          <small>${escapeHtml(account.userId)} · ${escapeHtml(account.email || 'No email')}</small>
+        </div>
+        <div class="policy-delete-actions">
+          <button class="policy-delete-cancel" id="cancelAccountDelete" type="button">Cancel</button>
+          <button class="policy-delete-confirm" type="submit">Delete permanently</button>
+        </div>
+      </form>`;
   };
 
   const renderManageAccountsPage = (query = '') => {
@@ -1657,6 +2095,17 @@ function initWorkspace(toast, profiles) {
       [MOBILE_TODAY_KEY_PREFIX, MOBILE_POSTS_KEY_PREFIX].forEach(prefix => {
         try { localStorage.removeItem(prefix + account.userId); } catch { /* private mode */ }
       });
+      try {
+        const logs = readAttendanceLogs();
+        Object.keys(logs).forEach(key => { if (logs[key]) delete logs[key][account.userId]; });
+        saveAttendanceLogs(logs);
+        const salaries = readSalaryProfiles();
+        delete salaries[account.userId];
+        saveSalaryProfiles(salaries);
+        const photos = JSON.parse(localStorage.getItem('sentryGuardProfilePhotos') || '{}');
+        delete photos[account.userId];
+        localStorage.setItem('sentryGuardProfilePhotos', JSON.stringify(photos));
+      } catch { /* keep account removal even if related cleanup fails */ }
       return `${displayNameOf(account)}'s account was removed`;
     }
     return '';
@@ -1668,7 +2117,57 @@ function initWorkspace(toast, profiles) {
     renderActiveAccountsPage(activeAccountsPage.hidden ? '' : activeAccountsSearch.value);
     renderManageAccountsPage(manageAccountsPage.hidden ? '' : manageAccountsSearch.value);
     renderAttendanceBoard();
+    updateHrRequestCounts();
+  updatePolicyUpdateCounts();
     updateSystemCounts();
+  };
+
+  const updateAccountFromManageForm = form => {
+    const accounts = getStoredAccounts();
+    const account = accounts.find(item => item.userId === form.dataset.userId);
+    if (!account) return toast('Account record was not found.');
+    const data = Object.fromEntries(new FormData(form).entries());
+    const required = ['firstName', 'lastName', 'gender', 'phone', 'country', 'street', 'department', 'email', 'password'];
+    if (required.some(field => !String(data[field] || '').trim())) return toast('Complete the required account fields.');
+    if (String(data.password).length < 6 || String(data.password).length > 12) return toast('Password must be 6–12 characters.');
+    const duplicate = accounts.find(item => item.userId !== account.userId && (item.email || '').toLowerCase() === String(data.email).toLowerCase());
+    if (duplicate) return toast('Another account already uses that email address.');
+    Object.assign(account, {
+      firstName: data.firstName.trim(),
+      middleName: data.middleName.trim(),
+      lastName: data.lastName.trim(),
+      gender: data.gender,
+      birthDate: data.birthDate,
+      birthday: data.birthDate,
+      phone: data.phone.trim(),
+      country: data.country,
+      region: data.region,
+      city: data.city,
+      barangay: data.barangay,
+      street: data.street.trim(),
+      postal: data.postal.trim(),
+      department: data.department,
+      email: data.email.trim(),
+      password: data.password,
+      accessRights: account.accessRights?.length ? account.accessRights : accessForDepartment(data.department),
+      updatedAt: new Date().toISOString(),
+    });
+    saveStoredAccounts(accounts);
+    refreshAccountsViews();
+    openManageAccountModal(account.userId);
+    toast('Account information was updated.');
+  };
+
+  const applyModalAccountAction = (userId, action) => {
+    const accounts = getStoredAccounts();
+    const account = accounts.find(item => item.userId === userId);
+    if (!account) return toast('Account record was not found.');
+    if (action === 'delete') return confirmDeleteAccount(userId);
+    const message = applyAccountAction(accounts, account, action);
+    saveStoredAccounts(accounts);
+    refreshAccountsViews();
+    openManageAccountModal(userId);
+    if (message) toast(message);
   };
 
   const handleAccountAction = event => {
@@ -1692,7 +2191,7 @@ function initWorkspace(toast, profiles) {
   };
 
 
-  /* --- registered guard directory (demo guards + approved accounts) --- */
+  /* --- registered guard directory (approved accounts only) --- */
 
   const DIRECTORY_AVATARS = [
     ['#eaf0ff', '#315ce9'], ['#e6f7ee', '#1d7a4c'], ['#fff4dc', '#a56a0a'],
@@ -1806,8 +2305,366 @@ function initWorkspace(toast, profiles) {
     error.hidden = true;
     renderPersonnelList($('#personnelSearch').value);
     renderGuardDirectory($('#guardDirectorySearch').value);
+    renderAttendanceBoard();
+    renderShiftHandovers();
     toast(`Post updated for ${displayNameOf(account)}`);
   });
+
+
+  /* --- Policy acknowledgement tracker + HR requests center --- */
+
+  const HR_REQUESTS_KEY = 'sentryHrRequests';
+  const POLICY_ACK_KEY = 'sentryPolicyAcknowledgements';
+  const POLICY_UPDATES_KEY = 'sentryPolicyUpdates';
+
+  const DEFAULT_POLICY_CENTER = [
+    {
+      id: 'POL-QR-2026-01',
+      title: 'QR Attendance Procedure Update',
+      summary: 'Guards must present the dynamic QR code for both time-in and time-out scans.',
+      published: '2026-09-21',
+      deadline: '2026-09-25',
+      audience: 'Security',
+    },
+    {
+      id: 'POL-POST-2026-02',
+      title: 'Post Assignment and Handover Rules',
+      summary: 'Assigned posts must be followed unless HR updates the deployment schedule.',
+      published: '2026-09-21',
+      deadline: '2026-09-28',
+      audience: 'Security',
+    },
+    {
+      id: 'POL-ABS-2026-03',
+      title: 'Late, Absence, and Missed Scan Reporting',
+      summary: 'Missed scans and emergency absences must be reported for HR review.',
+      published: '2026-09-18',
+      deadline: '2026-09-24',
+      audience: 'All staff',
+    },
+  ];
+
+  const getPolicyCenter = () => {
+    let saved = [];
+    try {
+      const parsed = JSON.parse(localStorage.getItem(POLICY_UPDATES_KEY) || '[]');
+      if (Array.isArray(parsed)) saved = parsed;
+    } catch { saved = []; }
+
+    // Do not auto-create sample/default policies. Policy updates should only
+    // appear after HR/Admin publishes them. Also clean older browser storage
+    // that still has the previously bundled sample policies.
+    const defaultIds = new Set(DEFAULT_POLICY_CENTER.map(policy => policy.id));
+    const userPublishedOnly = saved.filter(policy => !defaultIds.has(policy.id));
+    if (userPublishedOnly.length !== saved.length) {
+      savePolicyCenter(userPublishedOnly);
+      const acks = readPolicyAcks();
+      defaultIds.forEach(id => delete acks[id]);
+      savePolicyAcks(acks);
+    }
+    return userPublishedOnly;
+  };
+
+  const savePolicyCenter = policies => localStorage.setItem(POLICY_UPDATES_KEY, JSON.stringify(policies));
+
+  const savePublishedPolicy = ({ title, summary, deadline }) => {
+    const policy = {
+      id: `POL-${Date.now()}`,
+      title: title.trim(),
+      summary: summary.trim() || 'Please review and acknowledge this policy update.',
+      published: today(),
+      deadline,
+      audience: 'Security',
+      publisher: 'HR/Admin',
+    };
+    const policies = [policy, ...getPolicyCenter()];
+    savePolicyCenter(policies);
+    updatePolicyUpdateCounts();
+    openPolicyCenter();
+    toast('Policy update was published. Guards will see a notification.');
+  };
+
+  const publishPolicyUpdate = () => {
+    const defaultDeadline = new Date();
+    defaultDeadline.setDate(defaultDeadline.getDate() + 7);
+    actionTitle.textContent = 'Publish Policy Update';
+    actionDescription.textContent = 'Create a policy notification for active Security guards. It will appear in the mobile app notification bell until acknowledged.';
+    actionContent.innerHTML = `
+      <form class="hr-form policy-publish-form" id="publishPolicyForm">
+        <label>Policy title
+          <input id="policyTitleInput" required maxlength="80" placeholder="e.g. QR Attendance Procedure Update">
+        </label>
+        <label>Policy details
+          <textarea id="policySummaryInput" required rows="4" placeholder="Write the update guards need to read and acknowledge."></textarea>
+        </label>
+        <label>Acknowledgement deadline
+          <input id="policyDeadlineInput" type="date" required value="${defaultDeadline.toISOString().slice(0, 10)}">
+        </label>
+        <button type="submit">Publish update</button>
+      </form>`;
+    actionModal.hidden = false;
+    $('#policyTitleInput')?.focus();
+  };
+
+  const readPolicyAcks = () => {
+    try { return JSON.parse(localStorage.getItem(POLICY_ACK_KEY) || '{}'); }
+    catch { return {}; }
+  };
+
+  const savePolicyAcks = acks => localStorage.setItem(POLICY_ACK_KEY, JSON.stringify(acks));
+
+  const seedPolicyAcks = () => readPolicyAcks();
+
+  const policyStats = policy => {
+    const staff = activeSecurityAccounts();
+    const acks = seedPolicyAcks()[policy.id] || {};
+    const acknowledged = staff.filter(account => acks[account.userId]).length;
+    return { total: staff.length, acknowledged, pending: Math.max(0, staff.length - acknowledged), acks };
+  };
+
+  let policySelectionMode = false;
+  const selectedPolicyUpdates = new Set();
+
+  const trashIconMarkup = () => '<img src="../images/trash.png" alt="" aria-hidden="true">';
+
+  const updatePolicyUpdateCounts = () => {
+    const policies = getPolicyCenter();
+    const totalPending = policies.reduce((sum, policy) => sum + policyStats(policy).pending, 0);
+    const policyCount = $('#policyUpdateCount');
+    const pendingCount = $('#policyPendingAckCount');
+    const overview = $('#hrPendingPolicyCount');
+    if (policyCount) policyCount.textContent = policies.length;
+    if (pendingCount) pendingCount.textContent = totalPending;
+    if (overview) overview.textContent = totalPending || '—';
+  };
+
+  const openPolicyCenter = (selectionMode = policySelectionMode) => {
+    policySelectionMode = selectionMode;
+    if (!policySelectionMode) selectedPolicyUpdates.clear();
+    const columns = policySelectionMode
+      ? ['<label class="policy-select-all"><input id="selectAllPolicies" type="checkbox"> <span>Select All</span></label>', 'Policy', 'Published', 'Deadline', 'Acknowledged', 'Pending', 'Status', 'Actions']
+      : ['Policy', 'Published', 'Deadline', 'Acknowledged', 'Pending', 'Status', 'Actions'];
+    const policies = getPolicyCenter();
+    $('#hrReportModal').dataset.reportMode = 'policy-center';
+    $('#hrReportPrint').hidden = true;
+    if ($('#hrAttendanceDateControl')) $('#hrAttendanceDateControl').hidden = true;
+    $('#hrReportTitle').textContent = 'Policy Center';
+    $('#hrReportDate').innerHTML = `
+      <span>Publish policies and track staff acknowledgements.</span>
+      <button class="policy-delete-selected" id="deleteSelectedPolicy" type="button" aria-label="${policySelectionMode ? 'Delete selected policy updates' : 'Select policy updates to delete'}" title="${policySelectionMode ? 'Delete selected policy updates' : 'Select policy updates to delete'}" ${policySelectionMode && !selectedPolicyUpdates.size ? 'disabled' : ''}>${trashIconMarkup()}</button>`;
+    $('#hrReportHead').innerHTML = columns.map(col => `<th>${col}</th>`).join('');
+    $('#hrReportBody').innerHTML = policies.length ? policies.map(policy => {
+      const stats = policyStats(policy);
+      const status = stats.pending ? 'Active' : 'Complete';
+      const checked = selectedPolicyUpdates.has(policy.id) ? 'checked' : '';
+      return `<tr>
+        ${policySelectionMode ? `<td class="policy-select-cell"><input class="policy-row-checkbox" data-policy-select="${escapeHtml(policy.id)}" type="checkbox" ${checked} aria-label="Select ${escapeHtml(policy.title)}"></td>` : ''}
+        <td><strong>${escapeHtml(policy.title)}</strong><small>${escapeHtml(policy.summary)}</small></td>
+        <td>${escapeHtml(policy.published)}</td>
+        <td>${escapeHtml(policy.deadline)}</td>
+        <td>${stats.acknowledged} / ${stats.total}</td>
+        <td>${stats.pending}</td>
+        <td><span class="hr-status-pill ${stats.pending ? 'pending' : 'approved'}">${status}</span></td>
+        <td><button class="hr-mini-action" data-policy-view="${escapeHtml(policy.id)}" type="button">View</button></td>
+      </tr>`;
+    }).join('') : `<tr><td class="empty-pending" colspan="${policySelectionMode ? 8 : 7}">No published policy updates.</td></tr>`;
+    $('#hrReportModal').hidden = false;
+    refreshPolicyDeleteButton();
+  };
+
+  const refreshPolicyDeleteButton = () => {
+    const button = $('#deleteSelectedPolicy');
+    if (button) button.disabled = policySelectionMode && !selectedPolicyUpdates.size;
+    const selectAll = $('#selectAllPolicies');
+    if (selectAll) {
+      const policies = getPolicyCenter();
+      selectAll.checked = Boolean(policies.length) && policies.every(policy => selectedPolicyUpdates.has(policy.id));
+      selectAll.indeterminate = selectedPolicyUpdates.size > 0 && !selectAll.checked;
+    }
+  };
+
+  const deletePolicyUpdates = policyIds => {
+    const selectedIds = Array.isArray(policyIds) ? policyIds : [policyIds].filter(Boolean);
+    if (!selectedIds.length) return toast('Select at least one published policy update first.');
+    const selectedSet = new Set(selectedIds);
+    const policies = getPolicyCenter();
+    const removed = policies.filter(item => selectedSet.has(item.id));
+    const remaining = policies.filter(item => !selectedSet.has(item.id));
+    const acks = readPolicyAcks();
+    selectedIds.forEach(id => delete acks[id]);
+    savePolicyCenter(remaining);
+    savePolicyAcks(acks);
+    selectedPolicyUpdates.clear();
+    policySelectionMode = false;
+    closeActionModal();
+    updatePolicyUpdateCounts();
+    openPolicyCenter(false);
+    toast(`Deleted ${removed.length} policy update${removed.length === 1 ? '' : 's'}.`);
+  };
+
+  const confirmDeletePolicyUpdate = policyIds => {
+    const selectedIds = Array.isArray(policyIds) ? policyIds : [policyIds].filter(Boolean);
+    if (!selectedIds.length) return toast('Select at least one published policy update first.');
+    const selectedSet = new Set(selectedIds);
+    const policies = getPolicyCenter().filter(item => selectedSet.has(item.id));
+    if (!policies.length) return toast('Select at least one published policy update first.');
+    actionTitle.textContent = 'Delete Policy Update';
+    actionDescription.textContent = `Please confirm before deleting ${policies.length === 1 ? 'this published announcement' : 'these published announcements'}. This will also remove acknowledgement records.`;
+    actionContent.innerHTML = `
+      <form class="hr-form policy-delete-form" id="deletePolicyForm" data-policy-ids="${escapeHtml(selectedIds.join(','))}">
+        <div class="policy-delete-warning">
+          ${policies.map(policy => `<div class="policy-delete-item"><strong>${escapeHtml(policy.title)}</strong><small>${escapeHtml(policy.summary)}</small></div>`).join('')}
+        </div>
+        <div class="policy-delete-actions">
+          <button class="policy-delete-cancel" id="cancelPolicyDelete" type="button">Cancel</button>
+          <button class="policy-delete-confirm" type="submit">${trashIconMarkup()} <span>Confirm delete</span></button>
+        </div>
+      </form>`;
+    actionModal.hidden = false;
+  };
+
+  const openPolicyDetail = policyId => {
+    const policy = getPolicyCenter().find(item => item.id === policyId);
+    if (!policy) return;
+    const stats = policyStats(policy);
+    const columns = ['Guard', 'Guard ID', 'Post', 'Acknowledgement'];
+    $('#hrReportModal').dataset.reportMode = 'policy-detail';
+    $('#hrReportPrint').hidden = true;
+    if ($('#hrAttendanceDateControl')) $('#hrAttendanceDateControl').hidden = true;
+    $('#hrReportTitle').innerHTML = `<button class="hr-back-link policy-detail-back" id="backToPolicyCenter" type="button">← Back to Policy Center</button><br>${escapeHtml(policy.title)}`;
+    $('#hrReportDate').textContent = `${policy.summary} Deadline: ${policy.deadline}.`;
+    $('#hrReportHead').innerHTML = columns.map(col => `<th>${escapeHtml(col).toUpperCase()}</th>`).join('');
+    $('#hrReportBody').innerHTML = activeSecurityAccounts().map(account => {
+      const stamp = stats.acks[account.userId];
+      const label = stamp ? `Acknowledged · ${new Date(stamp).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Pending acknowledgement';
+      return `<tr>
+        <td><strong>${escapeHtml(displayNameOf(account))}</strong></td>
+        <td>${escapeHtml(account.userId)}</td>
+        <td>${escapeHtml(currentPostLabelOf(account))}</td>
+        <td><span class="hr-status-pill ${stamp ? 'approved' : 'pending'}">${escapeHtml(label)}</span></td>
+      </tr>`;
+    }).join('') || '<tr><td class="empty-pending" colspan="4">No approved Security guards are available.</td></tr>';
+  };
+
+  const defaultHrRequests = () => {
+    const staff = activeSecurityAccounts();
+    const today = new Date().toISOString().slice(0, 10);
+    const requests = [];
+    staff.forEach((account, index) => {
+      const record = attendanceStateFor(account);
+      if (record.absent || record.missedOut) {
+        requests.push({ id: `REQ-${today.replace(/-/g, '')}-${String(requests.length + 1).padStart(3, '0')}`, userId: account.userId, type: 'Attendance correction', detail: record.absent ? 'No QR scan recorded for today.' : 'Missed time-out scan.', filedAt: today, status: 'Pending' });
+      }
+      if (index === 0) requests.push({ id: `REQ-${today.replace(/-/g, '')}-OT1`, userId: account.userId, type: 'Overtime request', detail: 'Requesting overtime validation for extended post coverage.', filedAt: today, status: 'Pending' });
+      if (!account.post) requests.push({ id: `REQ-${today.replace(/-/g, '')}-POST${index + 1}`, userId: account.userId, type: 'Post reassignment', detail: 'Guard has no assigned post and needs deployment.', filedAt: today, status: 'Pending' });
+    });
+    return requests;
+  };
+
+  const getHrRequests = () => {
+    let saved = [];
+    try {
+      const parsed = JSON.parse(localStorage.getItem(HR_REQUESTS_KEY) || '[]');
+      if (Array.isArray(parsed)) saved = parsed;
+    } catch { saved = []; }
+    const existingKeys = new Set(saved.map(request => `${request.userId}|${request.type}|${request.detail}`));
+    const additions = defaultHrRequests().filter(request => !existingKeys.has(`${request.userId}|${request.type}|${request.detail}`));
+    if (additions.length) {
+      saved = [...saved, ...additions];
+      localStorage.setItem(HR_REQUESTS_KEY, JSON.stringify(saved));
+    }
+    return saved;
+  };
+
+  const saveHrRequests = requests => localStorage.setItem(HR_REQUESTS_KEY, JSON.stringify(requests));
+
+  const updateHrRequestCounts = () => {
+    const pending = getHrRequests().filter(request => request.status === 'Pending');
+    const set = (selector, type) => {
+      const element = $(selector);
+      if (element) element.textContent = pending.filter(request => request.type === type).length;
+    };
+    set('#attendanceRequestCount', 'Attendance correction');
+    set('#overtimeRequestCount', 'Overtime request');
+    set('#postRequestCount', 'Post reassignment');
+  };
+
+  const openRequestsCenter = () => {
+    const requests = getHrRequests();
+    const accounts = getStoredAccounts();
+    const columns = ['Request ID', 'Employee', 'Type', 'Date filed', 'Details', 'Status', 'Actions'];
+    $('#hrReportModal').dataset.reportMode = 'requests-center';
+    $('#hrReportPrint').hidden = true;
+    if ($('#hrAttendanceDateControl')) $('#hrAttendanceDateControl').hidden = true;
+    $('#hrReportTitle').textContent = 'HR Requests Center';
+    $('#hrReportDate').textContent = 'Review attendance corrections, overtime, leave, and post reassignment requests.';
+    $('#hrReportHead').innerHTML = columns.map(col => `<th>${escapeHtml(col).toUpperCase()}</th>`).join('');
+    $('#hrReportBody').innerHTML = requests.length
+      ? requests.map(request => {
+          const account = accounts.find(item => item.userId === request.userId);
+          const employee = account ? displayNameOf(account) : request.userId;
+          const pending = request.status === 'Pending';
+          return `<tr>
+            <td>${escapeHtml(request.id)}</td>
+            <td><strong>${escapeHtml(employee)}</strong><small>${escapeHtml(request.userId)}</small></td>
+            <td>${escapeHtml(request.type)}</td>
+            <td>${escapeHtml(request.filedAt)}</td>
+            <td>${escapeHtml(request.detail)}</td>
+            <td><span class="hr-status-pill ${pending ? 'pending' : request.status === 'Approved' ? 'approved' : 'rejected'}">${escapeHtml(request.status)}</span></td>
+            <td>${pending ? `<div class="hr-inline-actions"><button class="hr-mini-action" data-request-action="approve" data-request-id="${escapeHtml(request.id)}" type="button">Approve</button><button class="hr-mini-action reject" data-request-action="reject" data-request-id="${escapeHtml(request.id)}" type="button">Reject</button></div>` : '—'}</td>
+          </tr>`;
+        }).join('')
+      : '<tr><td class="empty-pending" colspan="7">No HR requests are awaiting review.</td></tr>';
+    $('#hrReportModal').hidden = false;
+    updateHrRequestCounts();
+  };
+
+  const handleRequestAction = event => {
+    const button = event.target.closest('[data-request-action]');
+    if (!button) return;
+    const requests = getHrRequests();
+    const request = requests.find(item => item.id === button.dataset.requestId);
+    if (!request) return;
+    request.status = button.dataset.requestAction === 'approve' ? 'Approved' : 'Rejected';
+    request.reviewedAt = new Date().toISOString();
+    saveHrRequests(requests);
+    updateHrRequestCounts();
+    openRequestsCenter();
+    toast(`${request.type} was ${request.status.toLowerCase()}.`);
+  };
+
+  $('#policyCenterBtn')?.addEventListener('click', openPolicyCenter);
+  $('#openPolicyCenter')?.addEventListener('click', openPolicyCenter);
+  $('#adminPolicyCenter')?.addEventListener('click', openPolicyCenter);
+  $('#publishPolicyUpdate')?.addEventListener('click', publishPolicyUpdate);
+  $('#openRequestsCenter')?.addEventListener('click', openRequestsCenter);
+  $('#hrReportTitle').addEventListener('click', event => {
+    if (event.target.closest('#backToPolicyCenter')) openPolicyCenter();
+  });
+  $('#hrReportDate').addEventListener('click', event => {
+    const deleteButton = event.target.closest('#deleteSelectedPolicy');
+    if (!deleteButton) return;
+    if (!policySelectionMode) return openPolicyCenter(true);
+    confirmDeletePolicyUpdate([...selectedPolicyUpdates]);
+  });
+  $('#hrReportHead').addEventListener('change', event => {
+    if (!event.target.matches('#selectAllPolicies')) return;
+    selectedPolicyUpdates.clear();
+    if (event.target.checked) getPolicyCenter().forEach(policy => selectedPolicyUpdates.add(policy.id));
+    openPolicyCenter(true);
+  });
+  $('#hrReportBody').addEventListener('change', event => {
+    if (!event.target.matches('[data-policy-select]')) return;
+    if (event.target.checked) selectedPolicyUpdates.add(event.target.dataset.policySelect);
+    else selectedPolicyUpdates.delete(event.target.dataset.policySelect);
+    refreshPolicyDeleteButton();
+  });
+  $('#hrReportBody').addEventListener('click', event => {
+    const policyButton = event.target.closest('[data-policy-view]');
+    if (policyButton) return openPolicyDetail(policyButton.dataset.policyView);
+    handleRequestAction(event);
+  });
+  updateHrRequestCounts();
 
   /* --- HR workflow reports: attendance logs + exception reports --- */
 
@@ -1815,7 +2672,8 @@ function initWorkspace(toast, profiles) {
 
   const openHrReport = mode => {
     const isAttendance = mode === 'attendance';
-    const records = collectTodayAttendance(isAttendance ? selectedAttendanceDate : new Date());
+    setReportDateMode(isAttendance ? 'hr-attendance' : 'exceptions');
+    const records = collectTodayAttendance(selectedAttendanceDate);
     const rows = isAttendance
       ? records.filter(record => record.hasScan)
       : records.filter(record => record.exception);
@@ -1830,14 +2688,14 @@ function initWorkspace(toast, profiles) {
         : [record.name, record.id, record.timeIn || '—', record.timeOut || '—', exceptionLabelOf(record)]),
       emptyText: isAttendance
         ? 'No QR scans recorded for this date.'
-        : 'No exceptions today — every guard scanned on time.',
+        : 'No exceptions for this date — every guard scanned on time.',
     };
     $('#hrReportModal').dataset.reportMode = isAttendance ? 'hr-attendance' : 'exceptions';
     $('#hrReportPrint').hidden = false;
-    $('#hrAttendanceDateControl').hidden = !isAttendance;
-    if (isAttendance) updateAttendanceDateLabel();
+    if ($('#hrAttendanceDateControl')) $('#hrAttendanceDateControl').hidden = false;
+    updateAttendanceDateLabel();
     $('#hrReportTitle').textContent = currentReport.title;
-    $('#hrReportDate').textContent = (isAttendance ? selectedAttendanceDate : new Date()).toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    $('#hrReportDate').textContent = selectedAttendanceDate.toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     $('#hrReportHead').innerHTML = columns.map(col => `<th>${escapeHtml(col).toUpperCase()}</th>`).join('');
     $('#hrReportBody').innerHTML = currentReport.rows.length
       ? currentReport.rows.map(cells => `<tr>${cells.map((cell, index) => index === 0 ? `<td><strong>${escapeHtml(cell)}</strong></td>` : `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')
@@ -1846,8 +2704,11 @@ function initWorkspace(toast, profiles) {
   };
 
   $('#hrAttendanceLogsBtn').addEventListener('click', () => openHrReport('attendance'));
-  document.addEventListener('attendance-date-applied', () => {
-    if (!$('#hrReportModal').hidden && $('#hrReportModal').dataset.reportMode === 'hr-attendance') openHrReport('attendance');
+  document.addEventListener('attendance-date-applied', event => {
+    if ($('#hrReportModal').hidden) return;
+    const mode = $('#hrReportModal').dataset.reportMode;
+    if (mode === 'hr-attendance' && event.detail?.mode === 'hr-attendance') openHrReport('attendance');
+    if (mode === 'exceptions' && event.detail?.mode === 'exceptions') openHrReport('exceptions');
   });
   $('#hrExceptionReportsBtn').addEventListener('click', () => openHrReport('exceptions'));
   $('#closeHrReport').addEventListener('click', () => { $('#hrReportModal').hidden = true; });
@@ -1875,7 +2736,7 @@ function initWorkspace(toast, profiles) {
       !needle || `${entry.name} ${entry.id} ${entry.email}`.toLowerCase().includes(needle));
     $('#employeeDirectoryPageCount').textContent = entries.length;
     $('#employeeDirectoryPageBody').innerHTML = matches.length
-      ? matches.map(entry => `<tr><td><strong>${escapeHtml(entry.name)}</strong></td><td>${escapeHtml(entry.id)}</td><td>${escapeHtml(entry.email)}</td><td>${escapeHtml(entry.contact)}</td><td>${escapeHtml(entry.age)}</td></tr>`).join('')
+      ? matches.map(entry => `<tr class="employee-directory-row" data-user-id="${escapeHtml(entry.id)}"><td><strong>${escapeHtml(entry.name)}</strong><small>Click to view full profile</small></td><td>${escapeHtml(entry.id)}</td><td>${escapeHtml(entry.email)}</td><td>${escapeHtml(entry.contact)}</td><td>${escapeHtml(entry.age)}</td></tr>`).join('')
       : '<tr><td class="empty-pending" colspan="5">No guards match your search.</td></tr>';
   };
 
@@ -1884,6 +2745,50 @@ function initWorkspace(toast, profiles) {
     $('#hrPanel').hidden = false;
     $('#hrActions').hidden = false;
   };
+
+  const employeeSearchBox = $('#employeeSearchInput');
+  const employeeSearchShell = employeeSearchBox.closest('.employee-search');
+  const employeeSuggestions = document.createElement('div');
+  employeeSuggestions.id = 'employeeSearchSuggestions';
+  employeeSuggestions.className = 'employee-suggestions';
+  employeeSuggestions.hidden = true;
+  employeeSearchShell.insertAdjacentElement('afterend', employeeSuggestions);
+
+  const employeeSuggestionMatches = query => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return [];
+    return activeSecurityAccounts()
+      .filter(account => `${displayNameOf(account)} ${account.userId} ${account.email || ''}`.toLowerCase().includes(needle))
+      .slice(0, 6);
+  };
+
+  const renderEmployeeSuggestions = query => {
+    const matches = employeeSuggestionMatches(query);
+    employeeSuggestions.hidden = !matches.length;
+    employeeSuggestions.innerHTML = matches.map(account => {
+      const record = attendanceStateFor(account);
+      const statusText = record.absent ? 'Absent / no scan' : record.late ? 'Late' : record.completed ? 'Completed' : 'On duty';
+      return `<button type="button" data-user-id="${escapeHtml(account.userId)}">
+        <strong>${escapeHtml(displayNameOf(account))}</strong>
+        <small>${escapeHtml(account.userId)} · ${escapeHtml(currentPostLabelOf(account))} · ${escapeHtml(statusText)}</small>
+      </button>`;
+    }).join('');
+  };
+
+  employeeSearchBox.addEventListener('input', event => renderEmployeeSuggestions(event.target.value));
+  employeeSearchBox.addEventListener('focus', event => renderEmployeeSuggestions(event.target.value));
+  employeeSuggestions.addEventListener('click', event => {
+    const button = event.target.closest('[data-user-id]');
+    if (!button) return;
+    employeeSuggestions.hidden = true;
+    employeeSearchBox.value = button.querySelector('strong')?.textContent || '';
+    profiles.showAccountProfile(button.dataset.userId);
+  });
+  document.addEventListener('click', event => {
+    if (!event.target.closest('.employee-search') && !event.target.closest('#employeeSearchSuggestions')) {
+      employeeSuggestions.hidden = true;
+    }
+  });
 
   $('#openEmployeeDirectory').addEventListener('click', () => {
     const prefill = $('#employeeSearchInput').value;
@@ -1896,6 +2801,11 @@ function initWorkspace(toast, profiles) {
   });
   $('#backToHrWorkspace').addEventListener('click', showHrWorkspace);
   $('#employeeDirectoryPageSearch').addEventListener('input', event => renderEmployeeDirectory(event.target.value));
+  $('#employeeDirectoryPageBody').addEventListener('click', event => {
+    const row = event.target.closest('[data-user-id]');
+    if (!row) return;
+    profiles.showAccountProfile(row.dataset.userId);
+  });
 
   /* --- panel switching --- */
 
@@ -1912,7 +2822,11 @@ function initWorkspace(toast, profiles) {
     Object.entries(navItems).forEach(([name, item]) => item.classList.toggle('active', name === panel));
 
     updateSystemCounts();
-    if (panel === 'hr') renderGuardDirectory();
+    if (panel === 'hr') {
+      renderGuardDirectory();
+      updateHrRequestCounts();
+      updatePolicyUpdateCounts();
+    }
     if (panel === 'admin') {
       renderPendingAccounts();
       renderUserAccounts();
@@ -1957,6 +2871,113 @@ function initWorkspace(toast, profiles) {
       <button type="submit">Save ${action === 'add' ? 'employee' : 'changes'}</button>
     </form>`;
 
+  const openAdminExceptionBreakdown = () => {
+    const records = collectTodayAttendance().filter(record => record.late || record.absent);
+    actionTitle.textContent = 'Late and Absent Logs';
+    actionDescription.textContent = 'Realtime exception breakdown for today based on QR attendance records.';
+    actionContent.innerHTML = records.length ? `
+      <div class="payroll-table-wrap">
+        <table class="payroll-salary-table admin-exception-table">
+          <thead><tr><th>Guard</th><th>Guard ID</th><th>Issue</th><th>Time in</th><th>Time out</th><th>Post</th></tr></thead>
+          <tbody>${records.map(record => `<tr>
+            <td><strong>${escapeHtml(record.name)}</strong></td>
+            <td>${escapeHtml(record.id)}</td>
+            <td><span class="hr-status-pill ${record.late ? 'pending' : 'rejected'}">${record.late ? 'Late arrival' : 'Absent / no scan'}</span></td>
+            <td>${escapeHtml(record.timeIn || '—')}</td>
+            <td>${escapeHtml(record.timeOut || '—')}</td>
+            <td>${escapeHtml(currentPostLabelOf(record.account))}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>` : '<div class="empty-pending">No late or absent records for today.</div>';
+    actionModal.hidden = false;
+  };
+
+  const renderSalaryManager = () => {
+    const profiles = readSalaryProfiles();
+    const accounts = activeSecurityAccounts();
+    if (!accounts.length) return '<div class="empty-pending">No approved Security guards are available. Approve Security accounts first.</div>';
+    return `
+      <form class="hr-form payroll-salary-form" id="payrollSalaryForm">
+        <div class="payroll-table-wrap">
+          <table class="payroll-salary-table">
+            <thead><tr><th>Guard</th><th>Monthly salary</th><th>Work days</th><th>Shift hrs</th><th>OT x</th><th>Allowances</th><th>Deductions</th></tr></thead>
+            <tbody>${accounts.map(account => {
+              const profile = normalizedSalaryProfile(account, profiles[account.userId] || {});
+              return `<tr data-user-id="${escapeHtml(account.userId)}">
+                <td><strong>${escapeHtml(displayNameOf(account))}</strong><small>${escapeHtml(account.userId)}</small></td>
+                <td><input name="monthlySalary" type="number" min="0" step="0.01" value="${profile.monthlySalary || ''}" placeholder="0.00"></td>
+                <td><input name="workingDays" type="number" min="1" step="1" value="${profile.workingDays}"></td>
+                <td><input name="shiftHours" type="number" min="1" step="0.5" value="${profile.shiftHours}"></td>
+                <td><input name="overtimeMultiplier" type="number" min="1" step="0.05" value="${profile.overtimeMultiplier}"></td>
+                <td><input name="allowances" type="number" min="0" step="0.01" value="${profile.allowances || ''}" placeholder="0.00"></td>
+                <td><input name="deductions" type="number" min="0" step="0.01" value="${profile.deductions || ''}" placeholder="0.00"></td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table>
+        </div>
+        <p class="payroll-helper">Daily, hourly, and overtime rates are computed automatically from the monthly salary.</p>
+        <button type="submit">Save salary profiles</button>
+      </form>`;
+  };
+
+  const renderPayrollRowsTable = (mode = 'run') => {
+    const summary = payrollSummary();
+    const rows = summary.rows;
+    if (!rows.length) return '<div class="empty-pending">No approved Security guards are available for payroll.</div>';
+    return `
+      <div class="payroll-summary-strip">
+        <span>Period: <strong>${escapeHtml(summary.period.label)}</strong></span>
+        <span>Estimated net: <strong>${money(summary.estimated)}</strong></span>
+        <span>Salary profiles: <strong>${summary.profileCount}/${summary.guardCount}</strong></span>
+      </div>
+      <div class="payroll-table-wrap">
+        <table class="payroll-salary-table payroll-run-table">
+          <thead><tr><th>Guard</th><th>Paid days</th><th>Absent</th><th>OT hrs</th><th>Late mins</th><th>Allowance</th><th>Adjustments</th><th>Gross</th><th>Deductions</th><th>Net pay</th></tr></thead>
+          <tbody>${rows.map(row => `<tr>
+            <td><strong>${escapeHtml(displayNameOf(row.account))}</strong><small>${escapeHtml(row.account.userId)}${row.profile ? '' : ' · Missing salary profile'}</small></td>
+            <td>${row.paidDays}</td>
+            <td>${row.absentDays}</td>
+            <td>${row.overtimeHours.toFixed(2)}</td>
+            <td>${Math.round(row.lateMinutes)}</td>
+            <td>${money(row.allowancePay)}</td>
+            <td>${money(row.adjustmentPay)}</td>
+            <td>${money(row.grossPay)}</td>
+            <td>${money(row.totalDeductions)}</td>
+            <td><strong>${money(row.netPay)}</strong></td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+      ${mode === 'run' ? '<button class="hr-primary payroll-finalize" id="finalizePayrollRun" type="button">Finalize payroll run</button>' : '<button class="hr-primary payroll-finalize" id="downloadPayrollReport" type="button">Prepare payroll report</button>'}`;
+  };
+
+  const renderPayrollAdjustments = () => {
+    const accounts = activeSecurityAccounts();
+    const names = Object.fromEntries(accounts.map(account => [account.userId, displayNameOf(account)]));
+    const adjustments = readPayrollAdjustments();
+    return `
+      <form class="hr-form payroll-adjustment-form" id="payrollAdjustmentForm">
+        <label>Adjustment type
+          <select id="payrollAdjustmentType" required><option>Overtime hours</option><option>Paid leave</option><option>Unpaid leave</option><option>Bonus</option><option>Cash advance</option><option>Other deduction</option></select>
+        </label>
+        <label>Guard
+          <select id="payrollAdjustmentUser" required>${accounts.map(account => `<option value="${escapeHtml(account.userId)}">${escapeHtml(displayNameOf(account))} — ${escapeHtml(account.userId)}</option>`).join('') || '<option value="">No approved Security accounts</option>'}</select>
+        </label>
+        <label><span id="payrollAdjustmentAmountLabel">Hours / days / amount</span>
+          <input id="payrollAdjustmentAmount" type="number" min="0" step="0.01" required placeholder="Enter hours, days, or amount">
+        </label>
+        <p class="payroll-helper" id="payrollAdjustmentHint">Overtime uses hours × overtime rate. Paid/unpaid leave uses days × daily rate. Bonus, cash advance, and other deductions use peso amounts.</p>
+        <label>Notes
+          <input id="payrollAdjustmentNote" maxlength="120" placeholder="Optional reason or approval reference">
+        </label>
+        <button type="submit">Save adjustment</button>
+      </form>
+      <div class="payroll-adjustment-list">
+        <h3>Saved adjustments</h3>
+        ${adjustments.length ? `<div class="payroll-table-wrap"><table class="payroll-salary-table"><thead><tr><th>Guard</th><th>Type</th><th>Value</th><th>Date</th><th>Note</th><th>Action</th></tr></thead><tbody>${adjustments.map(item => `<tr><td>${escapeHtml(names[item.userId] || item.userId)}</td><td>${escapeHtml(item.type)}</td><td>${escapeHtml(item.amount)}${item.unit ? ` ${escapeHtml(item.unit)}` : ''}</td><td>${escapeHtml(item.date || '')}</td><td>${escapeHtml(item.note || '—')}</td><td><button class="payroll-adjustment-delete" data-adjustment-delete="${escapeHtml(item.id)}" type="button">Delete</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty-pending">No payroll adjustments saved yet.</div>'}
+      </div>`;
+  };
+
+
   const openAction = (action, type = 'hr') => {
     if (action === 'profiles') return profiles.showAll();
     if (action === 'attendance') return setPanel('attendance');
@@ -1964,11 +2985,16 @@ function initWorkspace(toast, profiles) {
     const isPayroll = type === 'payroll';
     actionTitle.textContent = (isPayroll ? PAYROLL_ACTIONS : HR_ACTIONS)[action];
     actionDescription.textContent = isPayroll
-      ? 'This mock payroll tool uses validated attendance records from the attendance system.'
+      ? 'Payroll uses guard salary profiles and validated QR attendance records to compute monthly pay.'
       : 'Use this mock HR tool to review and update staff information.';
 
     const records = isPayroll ? PAYROLL_ACTION_RECORDS : HR_ACTION_RECORDS;
-    if (records[action]) actionContent.innerHTML = renderRecordList(records[action]);
+    if (isPayroll && action === 'salary') actionContent.innerHTML = renderSalaryManager();
+    else if (isPayroll && action === 'validated') actionContent.innerHTML = renderPayrollRowsTable('validated');
+    else if (isPayroll && action === 'overtime') actionContent.innerHTML = renderPayrollAdjustments();
+    else if (isPayroll && action === 'run') actionContent.innerHTML = renderPayrollRowsTable('run');
+    else if (isPayroll && action === 'reports') actionContent.innerHTML = renderPayrollRowsTable('reports');
+    else if (records[action]) actionContent.innerHTML = renderRecordList(records[action]);
     else if (REPORT_ACTIONS.includes(action)) actionContent.innerHTML = renderReportForm();
     else actionContent.innerHTML = renderEmployeeForm(action);
 
@@ -1983,25 +3009,137 @@ function initWorkspace(toast, profiles) {
     button.addEventListener('click', () => openAction(button.dataset.payrollAction, 'payroll'));
   });
 
-  $('#addEmployee').addEventListener('click', () => openAction('add'));
+  $('#addEmployee')?.addEventListener('click', () => openAction('add'));
   $('#guardDirectorySearch').addEventListener('input', event => renderGuardDirectory(event.target.value));
-  $('#createPayroll').addEventListener('click', () => openAction('run', 'payroll'));
-  $('#reviewExceptions').addEventListener('click', () => openAction('exceptions'));
-  $('#exportAnalytics').addEventListener('click', () => toast('Analytics summary is ready to export'));
+  $('#createPayroll')?.addEventListener('click', () => openAction('run', 'payroll'));
+  $('#reviewExceptions').addEventListener('click', openAdminExceptionBreakdown);
+  $('#exportAnalytics')?.addEventListener('click', () => toast('Analytics summary is ready to export'));
 
   /* --- approve / reject / activate / deactivate / remove accounts --- */
 
   pendingAccountRows?.addEventListener('click', handleAccountAction);
   userAccountRows?.addEventListener('click', handleAccountAction);
-  manageAccountsPageBody?.addEventListener('click', handleAccountAction);
+  manageAccountsPageBody?.addEventListener('click', event => {
+    const manageButton = event.target.closest('[data-account-manage]');
+    if (manageButton) return openManageAccountModal(manageButton.dataset.accountManage);
+    handleAccountAction(event);
+  });
 
   /* --- dialog closing and mock submissions --- */
 
   $('#closeHrAction').addEventListener('click', closeActionModal);
   closeWhenBackdropIsClicked(actionModal, closeActionModal);
 
+  actionContent.addEventListener('click', event => {
+    if (event.target.closest('#cancelPolicyDelete') || event.target.closest('#cancelAccountDelete')) closeActionModal();
+    const modalAccountAction = event.target.closest('[data-account-modal-action]');
+    if (modalAccountAction) {
+      const form = modalAccountAction.closest('#manageAccountForm');
+      if (form) applyModalAccountAction(form.dataset.userId, modalAccountAction.dataset.accountModalAction);
+    }
+    if (event.target.closest('#finalizePayrollRun')) {
+      const summary = payrollSummary();
+      if (summary.missingProfiles) return toast('Set salary profiles for every guard before finalizing payroll.');
+      const runs = readStoredList(PAYROLL_RUNS_KEY);
+      runs.unshift({ id: `PAY-${Date.now()}`, period: summary.period.label, estimated: summary.estimated, createdAt: new Date().toISOString(), rows: summary.rows.map(row => ({ userId: row.account.userId, netPay: row.netPay })) });
+      localStorage.setItem(PAYROLL_RUNS_KEY, JSON.stringify(runs));
+      updatePayrollDashboard();
+      toast('Payroll run finalized and saved.');
+    }
+    if (event.target.closest('#downloadPayrollReport')) {
+      downloadPayrollCsv();
+      toast('Payroll report CSV downloaded.');
+    }
+    const deleteAdjustment = event.target.closest('[data-adjustment-delete]');
+    if (deleteAdjustment) {
+      savePayrollAdjustments(readPayrollAdjustments().filter(item => item.id !== deleteAdjustment.dataset.adjustmentDelete));
+      updatePayrollDashboard();
+      actionContent.innerHTML = renderPayrollAdjustments();
+      toast('Payroll adjustment deleted.');
+    }
+  });
+
+  actionContent.addEventListener('change', event => {
+    const editForm = event.target.closest('#manageAccountForm');
+    if (editForm && event.target.matches('[data-edit-country], [data-edit-region], [data-edit-city]')) return updateEditAddressOptions(editForm);
+    if (!event.target.matches('#payrollAdjustmentType')) return;
+    const type = event.target.value;
+    const label = $('#payrollAdjustmentAmountLabel');
+    const input = $('#payrollAdjustmentAmount');
+    const hint = $('#payrollAdjustmentHint');
+    const copy = {
+      'Overtime hours': ['Overtime hours', 'Enter number of overtime hours', 'Computed as hours × overtime rate.'],
+      'Paid leave': ['Paid leave days', 'Enter number of paid leave days', 'Computed as days × daily rate.'],
+      'Unpaid leave': ['Unpaid leave days', 'Enter number of unpaid leave days', 'Deducted as days × daily rate.'],
+      'Bonus': ['Bonus amount', 'Enter peso amount', 'Added directly to payroll.'],
+      'Cash advance': ['Cash advance amount', 'Enter peso amount', 'Deducted directly from payroll.'],
+      'Other deduction': ['Deduction amount', 'Enter peso amount', 'Deducted directly from payroll.'],
+    }[type] || ['Hours / days / amount', 'Enter value', 'Enter the approved payroll value.'];
+    if (label) label.textContent = copy[0];
+    if (input) input.placeholder = copy[1];
+    if (hint) hint.textContent = copy[2];
+  });
+
   actionContent.addEventListener('submit', event => {
     event.preventDefault();
+    if (event.target.id === 'manageAccountForm') {
+      updateAccountFromManageForm(event.target);
+      return;
+    }
+    if (event.target.id === 'deleteAccountForm') {
+      const accounts = getStoredAccounts();
+      const account = accounts.find(item => item.userId === event.target.dataset.userId);
+      if (!account) return toast('Account record was not found.');
+      const message = applyAccountAction(accounts, account, 'remove');
+      saveStoredAccounts(accounts);
+      closeActionModal();
+      refreshAccountsViews();
+      toast(message || 'Account was deleted.');
+      return;
+    }
+    if (event.target.id === 'payrollSalaryForm') {
+      const profiles = readSalaryProfiles();
+      $$('#payrollSalaryForm tbody tr').forEach(row => {
+        const account = activeSecurityAccounts().find(item => item.userId === row.dataset.userId);
+        if (!account) return;
+        const data = Object.fromEntries([...row.querySelectorAll('input')].map(input => [input.name, input.value]));
+        profiles[account.userId] = normalizedSalaryProfile(account, { ...data, updatedAt: new Date().toISOString(), status: 'Active' });
+      });
+      saveSalaryProfiles(profiles);
+      updatePayrollDashboard();
+      closeActionModal();
+      toast('Guard salary profiles were saved. Payroll estimates updated.');
+      return;
+    }
+    if (event.target.id === 'payrollAdjustmentForm') {
+      const userId = $('#payrollAdjustmentUser')?.value;
+      const type = $('#payrollAdjustmentType')?.value;
+      const amount = Number($('#payrollAdjustmentAmount')?.value || 0);
+      const note = $('#payrollAdjustmentNote')?.value.trim() || '';
+      if (!userId || !type || amount <= 0) return toast('Choose a guard, adjustment type, and valid amount/hours.');
+      const unit = type === 'Overtime hours' ? 'hours' : ['Paid leave', 'Unpaid leave'].includes(type) ? 'days' : 'amount';
+      const adjustments = readPayrollAdjustments();
+      adjustments.unshift({ id: `ADJ-${Date.now()}`, userId, type, amount, unit, note, date: today(), createdAt: new Date().toISOString() });
+      savePayrollAdjustments(adjustments);
+      updatePayrollDashboard();
+      actionContent.innerHTML = renderPayrollAdjustments();
+      toast('Payroll adjustment saved.');
+      return;
+    }
+    if (event.target.id === 'deletePolicyForm') {
+      deletePolicyUpdates((event.target.dataset.policyIds || '').split(',').filter(Boolean));
+      return;
+    }
+    if (event.target.id === 'publishPolicyForm') {
+      const title = $('#policyTitleInput').value.trim();
+      const summary = $('#policySummaryInput').value.trim();
+      const deadline = $('#policyDeadlineInput').value;
+      if (!title || !summary || !deadline) return toast('Complete the policy title, details, and deadline.');
+      if (deadline < today()) return toast('Choose today or a future deadline.');
+      closeActionModal();
+      savePublishedPolicy({ title, summary, deadline });
+      return;
+    }
     closeActionModal();
     toast(/payroll/i.test(actionTitle.textContent)
       ? 'Payroll report is ready to generate'
@@ -2014,13 +3152,29 @@ function initWorkspace(toast, profiles) {
    Start-up
 ------------------------------------------------------------------ */
 
+function initLogoutButton() {
+  const button = $('#logoutButton');
+  const screen = $('#authScreen');
+  if (!button || !screen) return;
+  button.addEventListener('click', () => {
+    sessionStorage.removeItem('sentryLoggedInUser');
+    $('#adminPanelNav').hidden = true;
+    screen.hidden = false;
+    $('#authPassword').value = '';
+    document.body.classList.remove('hr-panel-active', 'payroll-panel-active', 'admin-panel-active');
+    $('#attendanceNav')?.click();
+  });
+}
+
 function initDashboard() {
   migrateStoredAccounts();
   const toast = createToast($('#toast'));
 
   initAuthentication();
+  initLogoutButton();
   initAddressCascade();
   renderAttendanceBoard();
+  initShiftHandovers();
   initAttendance(toast);
   updateSystemCounts();
   initScanner();
@@ -2028,7 +3182,7 @@ function initDashboard() {
   const profiles = initProfiles();
   initWorkspace(toast, profiles);
   window.addEventListener('storage', event => {
-    if (event.key === USER_ACCOUNTS_KEY || event.key?.startsWith(MOBILE_TODAY_KEY_PREFIX)) {
+    if (event.key === USER_ACCOUNTS_KEY || event.key === ATTENDANCE_LOGS_KEY || event.key?.startsWith(MOBILE_TODAY_KEY_PREFIX)) {
       renderAttendanceBoard();
       updateSystemCounts();
     }

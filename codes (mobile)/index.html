@@ -75,6 +75,10 @@
               <h2 id="homeName">Guard</h2>
             </div>
             <span class="home-date" id="todayLabel">—</span>
+            <button class="notification-btn" id="notificationBtn" type="button" aria-label="Policy notifications">
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAABPklEQVR4AbTVAVaDMBCE4erF1JOpJ1NPZvPxMjygJFBo+xiyJNn5sxDo6+XJv72A97KOn6L/KvFXiTePLUCMGYpjKP4sF4BdUA8gMca/xeyj6KVK/F1iBxCg+EY9gEQJjBiCuCaxBRhznbnimVoAySYySOx6KWNgKqDl+KUFeKszJdew2ViEwdUqWoCsZg8gc5IDNqoFGCecDR4FaFaxBkipSTpVRA/wd8q5Jq8BVndDnd9qmjtpCbCvYzKN09dq3U5ye2d5U4CBrD4rahmu9SeHB9AwZwoYOsrJRLAS3nWoQK4kEO3sTc7ba9BX8ojkDsY5TSvwQcsKMn6kVQmvIXcK0OHW5JN8tB3NGS4B+h6qvQCVeSZ2B+WPaHMxewHuKzPGBEL6uroHkA0AJlZV19zgXoC5DD14D1Gsb1NXAAAA///MlAmEAAAABklEQVQDAI9QQTHXWJ3NAAAAAElFTkSuQmCC" alt="">
+              <b id="notificationBadge" hidden>0</b>
+            </button>
           </header>
 
           <article class="status-card">
@@ -180,7 +184,11 @@
         <!-- ================= PROFILE ================= -->
         <section class="view" id="view-profile">
           <article class="profile-hero">
-            <div class="profile-photo initials" id="profileAvatar">··</div>
+            <button class="profile-photo initials profile-photo-button" id="profilePhotoButton" type="button" aria-label="Change profile picture">
+              <span id="profileAvatar">··</span>
+              <small>Change photo</small>
+            </button>
+            <input id="profilePhotoInput" type="file" accept="image/*" hidden>
             <h2 id="profileName">Guard</h2>
             <p id="profileSub">·</p>
             <span class="status-pill" id="profilePill">● Off duty</span>
@@ -206,6 +214,19 @@
         </section>
 
       </div><!-- /views -->
+
+      <div class="notification-shade" id="notificationShade" hidden></div>
+      <section class="notification-panel" id="notificationPanel" hidden aria-label="Policy notifications">
+        <div class="notification-grabber"></div>
+        <header>
+          <div>
+            <p>POLICY UPDATES</p>
+            <h2>Notifications</h2>
+          </div>
+          <button id="closeNotifications" type="button" aria-label="Close notifications">×</button>
+        </header>
+        <div id="notificationList"></div>
+      </section>
 
       <!-- Bottom tab bar -->
       <nav class="tabbar" id="tabbar" hidden>
@@ -237,5 +258,5 @@
 
   <script src="qrcode.min.js"></script>
   <script src="app.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3cd9db6fb3a8514',t:'MTc4OTcwNTgzNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3eb2756ed74d769',t:'MTc5MDAxNTU1OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

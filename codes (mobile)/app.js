@@ -14,6 +14,10 @@
 
 const USER_ACCOUNTS_KEY = 'sentryUserAccounts';
 const SESSION_KEY = 'sentryGuardSession';
+const POLICY_UPDATES_KEY = 'sentryPolicyUpdates';
+const POLICY_ACK_KEY = 'sentryPolicyAcknowledgements';
+const ATTENDANCE_LOGS_KEY = 'sentryAttendanceLogs';
+const PROFILE_PHOTOS_KEY = 'sentryGuardProfilePhotos';
 const SHIFT_START_MINUTES = 7 * 60;          // 07:00 AM
 const QR_TTL_MS = 30 * 1000;                 // dynamic code lifetime
 
@@ -30,7 +34,6 @@ const AVATAR_COLORS = [
 ];
 
 let guard = null;        // linked web account of the logged-in guard
-let weekCache = null;    // this account's sample history (stable per guard)
 let todayState = null;   // today's live time-in/out for this guard
 
 
@@ -83,6 +86,24 @@ function readToday() {
 
 function saveToday() {
   localStorage.setItem(todayStoreKey(), JSON.stringify(todayState));
+  rememberAttendanceLog();
+}
+
+function rememberAttendanceLog() {
+  if (!guard || !todayState || (!todayState.in && !todayState.out)) return;
+  let logs = {};
+  try { logs = JSON.parse(localStorage.getItem(ATTENDANCE_LOGS_KEY) || '{}'); }
+  catch { logs = {}; }
+  logs[todayState.key] = logs[todayState.key] || {};
+  logs[todayState.key][guard.userId] = {
+    in: todayState.in,
+    out: todayState.out,
+    token: todayState.token || '',
+    post: guard.post || '',
+    assignment: guard.assignment || '',
+    savedAt: new Date().toISOString(),
+  };
+  localStorage.setItem(ATTENDANCE_LOGS_KEY, JSON.stringify(logs));
 }
 
 function formatTime(date) {
@@ -103,49 +124,81 @@ function minsToLabel(totalMinutes) {
   return `${String(Math.floor(hours)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')} ${suffix}`;
 }
 
-/* Deterministic per-guard values, so every account sees stable data */
+function readAllAttendanceLogs() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(ATTENDANCE_LOGS_KEY) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch { return {}; }
+}
+
+function parseLogKey(key) {
+  const [year, month, day] = String(key).split('-').map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  return new Date(year, month, day);
+}
+
+function sameDayKey(date = new Date()) {
+  return todayKey(date);
+}
+
 function hashString(text) {
   let hash = 2166136261;
-  for (let i = 0; i < text.length; i += 1) {
-    hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
-  }
+  for (let i = 0; i < String(text).length; i += 1) hash = Math.imul(hash ^ String(text).charCodeAt(i), 16777619);
   return hash >>> 0;
 }
 
-function mulberry32(seed) {
-  let state = seed;
-  return () => {
-    state |= 0;
-    state = (state + 0x6D2B79F5) | 0;
-    let mix = Math.imul(state ^ (state >>> 15), 1 | state);
-    mix = (mix + Math.imul(mix ^ (mix >>> 7), 61 | mix)) ^ mix;
-    return ((mix ^ (mix >>> 14)) >>> 0) / 4294967296;
-  };
+function hoursBetween(startIso, endIso) {
+  if (!startIso || !endIso) return '—';
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return '—';
+  const totalMinutes = Math.round((end - start) / 60000);
+  return `${Math.floor(totalMinutes / 60)}h ${String(totalMinutes % 60).padStart(2, '0')}m`;
 }
 
-/* Sample 6-day history with one late and one absent day per guard */
+function guardAttendanceRecords(limit = 30) {
+  if (!guard) return [];
+  const logs = readAllAttendanceLogs();
+  if (todayState?.key && (todayState.in || todayState.out)) {
+    logs[todayState.key] = logs[todayState.key] || {};
+    logs[todayState.key][guard.userId] = {
+      in: todayState.in,
+      out: todayState.out,
+      post: guard.post || '',
+      assignment: guard.assignment || '',
+    };
+  }
+  return Object.entries(logs)
+    .map(([key, byGuard]) => {
+      const entry = byGuard?.[guard.userId];
+      const date = parseLogKey(key);
+      if (!entry || !date || (!entry.in && !entry.out)) return null;
+      const inDate = entry.in ? new Date(entry.in) : null;
+      const status = entry.in
+        ? (minutesOf(entry.in) > SHIFT_START_MINUTES ? 'late' : 'present')
+        : 'today';
+      const postLabel = [entry.post, entry.assignment].filter(Boolean).join(' · ') || postLabelFor(key);
+      return {
+        key,
+        date,
+        timeIn: inDate && !Number.isNaN(inDate.getTime()) ? formatTime(inDate) : '—',
+        timeOut: entry.out ? formatTime(new Date(entry.out)) : '—',
+        status,
+        postLabel,
+        hours: hoursBetween(entry.in, entry.out),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.date - a.date)
+    .slice(0, limit);
+}
+
 function pastWeek() {
-  if (weekCache) return weekCache;
-  const rand = mulberry32(hashString(guard.userId));
-  const pick = () => Math.floor(rand() * 6);
-  const lateDay = pick();
-  let absentDay = pick();
-  if (absentDay === lateDay) absentDay = (absentDay + 3) % 6;
-
-  weekCache = Array.from({ length: 6 }, (_, index) => {
-    const daysAgo = index + 1;
-    if (daysAgo - 1 === absentDay) return [daysAgo, null, null, 'absent'];
-    const jitter = () => Math.floor(rand() * 14) - 7;
-    const late = daysAgo - 1 === lateDay;
-    return [
-      daysAgo,
-      minsToLabel((late ? 7 * 60 + 3 : 6 * 60 + 42) + jitter()),
-      minsToLabel(15 * 60 + jitter()),
-      late ? 'late' : 'present',
-    ];
-  });
-  return weekCache;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  return guardAttendanceRecords(30).filter(record => record.date >= cutoff);
 }
+
 
 let toastTimer;
 function toast(message) {
@@ -233,19 +286,118 @@ function refreshAccount() {
   }
 }
 
+function readPolicyUpdates() {
+  try {
+    const policies = JSON.parse(localStorage.getItem(POLICY_UPDATES_KEY) || '[]');
+    return Array.isArray(policies) ? policies : [];
+  } catch { return []; }
+}
+
+function readPolicyAcks() {
+  try { return JSON.parse(localStorage.getItem(POLICY_ACK_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function savePolicyAcks(acks) {
+  localStorage.setItem(POLICY_ACK_KEY, JSON.stringify(acks));
+}
+
+function policiesForGuard() {
+  if (!guard) return [];
+  return readPolicyUpdates().filter(policy =>
+    !policy.audience || policy.audience === 'All staff' || policy.audience === guard.department);
+}
+
+function unreadPolicies() {
+  const acks = readPolicyAcks();
+  return policiesForGuard().filter(policy => !acks[policy.id]?.[guard.userId]);
+}
+
+function renderNotifications() {
+  if (!guard) return;
+  const unread = unreadPolicies();
+  const badge = $('#notificationBadge');
+  const button = $('#notificationBtn');
+  const list = $('#notificationList');
+  if (!badge || !button || !list) return;
+
+  badge.hidden = unread.length === 0;
+  badge.textContent = unread.length;
+  button.classList.toggle('has-unread', unread.length > 0);
+
+  const policies = policiesForGuard();
+  list.innerHTML = policies.length
+    ? policies.map(policy => {
+        const acknowledged = !!readPolicyAcks()[policy.id]?.[guard.userId];
+        return `<article class="notification-card ${acknowledged ? 'read' : 'unread'}">
+          <div><strong>${policy.title}</strong><small>${policy.summary || 'Please review this policy update.'}</small><em>Deadline: ${policy.deadline || '—'}</em></div>
+          ${acknowledged
+            ? '<span class="acknowledged-pill">Acknowledged</span>'
+            : `<button type="button" data-ack-policy="${policy.id}">Acknowledge</button>`}
+        </article>`;
+      }).join('')
+    : '<p class="notification-empty">No policy updates yet.</p>';
+}
+
+function openNotifications() {
+  renderNotifications();
+  $('#notificationShade').hidden = false;
+  $('#notificationPanel').hidden = false;
+  requestAnimationFrame(() => $('#notificationPanel').classList.add('show'));
+}
+
+function closeNotifications() {
+  const panel = $('#notificationPanel');
+  panel.classList.remove('show');
+  setTimeout(() => {
+    panel.hidden = true;
+    $('#notificationShade').hidden = true;
+  }, 220);
+}
+
+function acknowledgePolicy(policyId) {
+  const acks = readPolicyAcks();
+  acks[policyId] = { ...(acks[policyId] || {}), [guard.userId]: new Date().toISOString() };
+  savePolicyAcks(acks);
+  renderNotifications();
+  toast('Policy acknowledgement recorded.');
+}
+
+function readProfilePhotos() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PROFILE_PHOTOS_KEY) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch { return {}; }
+}
+
+function saveProfilePhotos(photos) {
+  localStorage.setItem(PROFILE_PHOTOS_KEY, JSON.stringify(photos));
+}
+
+function profilePhotoFor(userId) {
+  return readProfilePhotos()[userId] || '';
+}
+
 function applyIdentity() {
   const name = displayNameOf(guard);
   const initials = name.split(/\s+/).map(word => word[0]).slice(0, 2).join('').toUpperCase() || '··';
   const [bg, fg] = AVATAR_COLORS[hashString(guard.userId) % AVATAR_COLORS.length];
 
-  ['#homeAvatar', '#profileAvatar'].forEach(selector => {
-    const avatar = $(selector);
-    avatar.textContent = initials;
-    avatar.style.background = bg;
-    avatar.style.color = fg;
-  });
+  const photo = profilePhotoFor(guard.userId);
+  const homeAvatar = $('#homeAvatar');
+  homeAvatar.textContent = photo ? '' : initials;
+  homeAvatar.style.background = photo ? `center / cover no-repeat url(${photo})` : bg;
+  homeAvatar.style.color = fg;
+  homeAvatar.classList.toggle('has-photo', Boolean(photo));
 
-  $('#homeName').textContent = name;
+  const profileButton = $('#profilePhotoButton');
+  const profileAvatar = $('#profileAvatar');
+  profileAvatar.textContent = photo ? '' : initials;
+  profileButton.style.background = photo ? `center / cover no-repeat url(${photo})` : bg;
+  profileButton.style.color = fg;
+  profileButton.classList.toggle('has-photo', Boolean(photo));
+
+  $('#homeName').textContent = guard.firstName || name.split(/\s+/)[0] || name;
   $('#profileName').textContent = name;
   $('#profileSub').textContent = `${guard.userId} · Verified guard`;
   $('#qrGuardLine').textContent = `${guard.userId} · ${name}`;
@@ -263,8 +415,8 @@ function applyIdentity() {
 }
 
 function enterApp() {
-  weekCache = null;
   todayState = readToday();
+  rememberAttendanceLog();
   snapshotTodayPost();
   applyIdentity();
   $('#tabbar').hidden = false;
@@ -347,8 +499,7 @@ function todayStatus() {
   return { title: 'Not timed in', pill: '● Off duty', mode: '' };
 }
 
-function recordRow(dateLabel, timeIn, timeOut, status, highlight = false, postLabel = '') {
-  const hours = (timeIn !== '—' && timeOut !== '—') ? '8h 00m' : '—';
+function recordRow(dateLabel, timeIn, timeOut, status, highlight = false, postLabel = '', hours = '—') {
   return `
     <article class="record-card${highlight ? ' today' : ''}">
       <div class="record-top">
@@ -375,12 +526,11 @@ function recentRow(date, timeIn, status) {
 
 function countWeek() {
   let present = 0, late = 0, absent = 0;
-  pastWeek().forEach(([, , , status]) => {
-    if (status === 'present') present += 1;
-    else if (status === 'late') late += 1;
+  pastWeek().forEach(record => {
+    if (record.status === 'present') present += 1;
+    else if (record.status === 'late') late += 1;
     else absent += 1;
   });
-  if (todayState.in) (minutesOf(todayState.in) > SHIFT_START_MINUTES ? late += 1 : present += 1);
   return { present, late, absent };
 }
 
@@ -419,11 +569,12 @@ function renderHome() {
   $('#shiftNote').textContent = note;
 
   /* Last three days for the home preview */
-  $('#recentList').innerHTML = pastWeek().slice(0, 3).map(([ago, timeIn, , status]) => {
-    const date = new Date();
-    date.setDate(date.getDate() - ago);
-    return recentRow(date, timeIn || '—', status);
-  }).join('');
+  renderNotifications();
+
+  const recent = pastWeek().slice(0, 3);
+  $('#recentList').innerHTML = recent.length
+    ? recent.map(record => recentRow(record.date, record.timeIn, record.status)).join('')
+    : '<div class="empty-records">No attendance logs yet.</div>';
 
   /* Profile week summary */
   const { present, late, absent } = countWeek();
@@ -434,22 +585,18 @@ function renderHome() {
 }
 
 function renderRecords() {
-  const cards = [];
-  const now = new Date();
-
-  const inLabel = todayState.in ? formatTime(new Date(todayState.in)) : '—';
-  const outLabel = todayState.out ? formatTime(new Date(todayState.out)) : '—';
-  const status = todayState.in
-    ? (minutesOf(todayState.in) > SHIFT_START_MINUTES ? 'late' : 'present')
-    : 'today';
-  cards.push(recordRow(`Today · ${formatDay(now)}`, inLabel, outLabel, status, true, postLabelFor(todayKey())));
-
-  pastWeek().forEach(([ago, timeIn, timeOut, recordStatus]) => {
-    const date = new Date();
-    date.setDate(date.getDate() - ago);
-    cards.push(recordRow(formatDay(date), timeIn || '—', timeOut || '—', recordStatus, false, postLabelFor(todayKey(date))));
-  });
-  $('#recordList').innerHTML = cards.join('');
+  const records = guardAttendanceRecords(30);
+  $('#recordList').innerHTML = records.length
+    ? records.map(record => recordRow(
+        record.key === todayKey() ? `Today · ${formatDay(record.date)}` : formatDay(record.date),
+        record.timeIn,
+        record.timeOut,
+        record.status,
+        record.key === todayKey(),
+        record.postLabel,
+        record.hours,
+      )).join('')
+    : '<div class="empty-records large">No attendance logs yet. Show your QR code to personnel to create your first record.</div>';
 
   const { present, late, absent } = countWeek();
   $('#sumPresent').textContent = present;
@@ -610,12 +757,42 @@ function initScannerDemo() {
    Navigation, clock and start-up
 ------------------------------------------------------------------ */
 
+function initProfilePhotoUpload() {
+  const button = $('#profilePhotoButton');
+  const input = $('#profilePhotoInput');
+  if (!button || !input) return;
+  button.addEventListener('click', () => input.click());
+  input.addEventListener('change', () => {
+    const file = input.files?.[0];
+    if (!file || !guard) return;
+    if (!file.type.startsWith('image/')) return toast('Choose an image file for your profile picture.');
+    if (file.size > 2 * 1024 * 1024) return toast('Choose an image smaller than 2 MB.');
+    const reader = new FileReader();
+    reader.onload = () => {
+      const photos = readProfilePhotos();
+      photos[guard.userId] = reader.result;
+      saveProfilePhotos(photos);
+      applyIdentity();
+      toast('Profile picture updated.');
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function initNavigation() {
   document.querySelectorAll('[data-view]').forEach(button => {
     button.addEventListener('click', () => showView(button.dataset.view));
   });
   document.querySelectorAll('[data-goto]').forEach(button => {
     button.addEventListener('click', () => showView(button.dataset.goto));
+  });
+  $('#notificationBtn')?.addEventListener('click', openNotifications);
+  $('#closeNotifications')?.addEventListener('click', closeNotifications);
+  $('#notificationShade')?.addEventListener('click', closeNotifications);
+  $('#notificationList')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-ack-policy]');
+    if (button) acknowledgePolicy(button.dataset.ackPolicy);
   });
 }
 
@@ -632,9 +809,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initClock();
   initAuth();
   initNavigation();
+  initProfilePhotoUpload();
   initScannerDemo();
   window.addEventListener('storage', event => {
     if (event.key === USER_ACCOUNTS_KEY) refreshAccount();
+    if (event.key === POLICY_UPDATES_KEY || event.key === POLICY_ACK_KEY) renderNotifications();
   });
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) refreshAccount();

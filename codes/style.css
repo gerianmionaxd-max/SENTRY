@@ -3906,3 +3906,1249 @@ main {
         bottom:calc(100% + 10px);
     }
 }
+
+/* Dynamic Shift Handovers / Deployment schedule */
+.handover-list {
+    display:grid;
+    gap:0;
+}
+
+.handover-item span {
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:2px;
+    min-width:92px;
+    color:#536077;
+    line-height:1.25;
+}
+
+.handover-item span b {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:4px 8px;
+    border-radius:999px;
+    font-size:9px;
+    font-weight:800;
+    white-space:nowrap;
+}
+
+.handover-item span small {
+    max-width:118px;
+    margin:0;
+    color:#8b95a6;
+    font-size:9px;
+    text-align:right;
+    white-space:normal;
+}
+
+.handover-item.ready span b,
+.handover-pill.ready {
+    color:#21835d;
+    background:#e7f6ef;
+}
+
+.handover-item.warning span b,
+.handover-pill.warning {
+    color:#a56a0a;
+    background:#fff4dc;
+}
+
+.handover-item.danger span b,
+.handover-pill.danger {
+    color:#c04d5a;
+    background:#fff0f2;
+}
+
+.handover-item.done span b,
+.handover-pill.done {
+    color:#315ce9;
+    background:#eef2ff;
+}
+
+.handover-pill {
+    display:inline-flex;
+    padding:4px 8px;
+    border-radius:999px;
+    font:800 10px 'DM Sans';
+}
+
+.empty-handover {
+    color:#7d879b;
+}
+
+.empty-handover strong {
+    color:#202c49;
+}
+
+/* HR employee search suggestions and clickable directory rows */
+.hr-side article:has(#employeeSearchInput) {
+    position:relative;
+}
+
+.employee-suggestions {
+    position:absolute;
+    left:21px;
+    right:21px;
+    top:122px;
+    z-index:12;
+    display:grid;
+    gap:6px;
+    padding:8px;
+    border:1px solid #dce3ef;
+    border-radius:12px;
+    background:#fff;
+    box-shadow:0 16px 34px #17213a1f;
+    animation:employeeSuggestIn .16s ease;
+}
+
+.employee-suggestions[hidden] {
+    display:none;
+}
+
+@keyframes employeeSuggestIn {
+    from { opacity:0; transform:translateY(-6px); }
+}
+
+.employee-suggestions button {
+    width:100%;
+    border:0;
+    border-radius:9px;
+    padding:10px 11px;
+    background:#fff;
+    text-align:left;
+    cursor:pointer;
+    transition:background .16s ease, transform .14s ease;
+}
+
+.employee-suggestions button:hover,
+.employee-suggestions button:focus-visible {
+    background:#f0f3ff;
+    outline:none;
+    transform:translateX(3px);
+}
+
+.employee-suggestions strong,
+.employee-suggestions small {
+    display:block;
+}
+
+.employee-suggestions strong {
+    color:#202c49;
+    font-size:12px;
+}
+
+.employee-suggestions small {
+    margin-top:2px;
+    color:#7d879b;
+    font-size:10px;
+    line-height:1.35;
+}
+
+.employee-directory-row {
+    cursor:pointer;
+    transition:background .16s ease, transform .14s ease, box-shadow .16s ease;
+}
+
+.employee-directory-row:hover {
+    background:#f7f9ff;
+    box-shadow:inset 3px 0 0 #315ce9;
+}
+
+.employee-directory-row:active {
+    transform:scale(.998);
+}
+
+.employee-directory-row small {
+    color:#8b95a6;
+    font-size:10px;
+}
+
+@media (max-width:700px) {
+    .employee-suggestions {
+        position:static;
+        margin-top:-5px;
+    }
+}
+
+/* HR Policy Center and Requests Center */
+.hr-status-pill {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:4px 8px;
+    border-radius:999px;
+    font:800 10px 'DM Sans';
+    white-space:nowrap;
+}
+
+.hr-status-pill.pending {
+    color:#a56a0a;
+    background:#fff4dc;
+}
+
+.hr-status-pill.approved {
+    color:#21835d;
+    background:#e7f6ef;
+}
+
+.hr-status-pill.rejected {
+    color:#c04d5a;
+    background:#fff0f2;
+}
+
+.hr-mini-action {
+    border:0;
+    border-radius:7px;
+    padding:7px 10px;
+    background:#315ce9;
+    color:#fff;
+    font:800 10px 'DM Sans';
+    cursor:pointer;
+    transition:background .18s ease, box-shadow .18s ease, transform .16s ease;
+}
+
+.hr-mini-action:hover {
+    background:#2549c4;
+    box-shadow:0 6px 14px #315ce926;
+    transform:translateY(-1px);
+}
+
+.hr-mini-action:active {
+    transform:translateY(0) scale(.97);
+}
+
+.hr-mini-action.reject {
+    color:#c04d5a;
+    background:#fff0f2;
+}
+
+.hr-mini-action.reject:hover {
+    background:#ffe4e8;
+    box-shadow:0 6px 14px #c04d5a18;
+}
+
+.hr-inline-actions {
+    display:flex;
+    gap:7px;
+    flex-wrap:wrap;
+}
+
+.hr-report-table small {
+    display:block;
+    margin-top:2px;
+    color:#7d879b;
+    font-size:10px;
+    line-height:1.35;
+}
+
+/* Policy Updates card/actions */
+.policy-card-actions {
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:12px;
+}
+
+.admin-heading-actions {
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.policy-publish-inline {
+    margin-left:10px;
+    vertical-align:middle;
+}
+
+/* Policy card buttons are real action buttons, not plain text links */
+.policy-card-actions .hr-link,
+#openPolicyCenter,
+#publishPolicyUpdate {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    margin:0;
+    padding:9px 13px;
+    border:1px solid #c9d8ff;
+    border-radius:999px;
+    background:#eef2ff;
+    color:#315ce9;
+    font:800 11px 'DM Sans';
+    transition:background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .16s ease;
+}
+
+#publishPolicyUpdate {
+    background:#315ce9;
+    color:#fff;
+    border-color:#315ce9;
+}
+
+.policy-card-actions .hr-link:hover,
+#openPolicyCenter:hover,
+#publishPolicyUpdate:hover {
+    background:#e4ebff;
+    border-color:#315ce9;
+    box-shadow:0 7px 18px #315ce91f;
+    transform:translateY(-1px);
+    text-decoration:none;
+}
+
+#publishPolicyUpdate:hover {
+    background:#2549c4;
+}
+
+.policy-card-actions .hr-link:active,
+#openPolicyCenter:active,
+#publishPolicyUpdate:active {
+    transform:translateY(0) scale(.97);
+}
+
+.policy-publish-form textarea {
+    width:100%;
+    margin-top:5px;
+    padding:10px;
+    border:1px solid #dce3ef;
+    border-radius:7px;
+    color:#202c49;
+    background:#fff;
+    font:12px 'DM Sans';
+    resize:vertical;
+    min-height:98px;
+}
+
+.policy-publish-form textarea:focus {
+    outline:2px solid #315ce933;
+    border-color:#315ce9;
+}
+
+/* Dynamic pop-up sizing across report, form, profile, and management windows */
+.hr-action-dialog,
+.profile-dialog,
+.scanner-dialog {
+    width:fit-content;
+    min-width:min(520px, calc(100vw - 40px));
+    max-width:calc(100vw - 40px);
+    max-height:calc(100vh - 40px);
+}
+
+.hr-action-dialog {
+    overflow:auto;
+}
+
+.hr-report-dialog {
+    width:fit-content !important;
+    min-width:min(760px, calc(100vw - 40px));
+    max-width:calc(100vw - 40px) !important;
+    max-height:calc(100vh - 40px) !important;
+}
+
+.hr-report-dialog .hr-report-table-wrap {
+    max-width:calc(100vw - 96px);
+    max-height:calc(100vh - 260px);
+    overflow:auto;
+}
+
+.hr-report-table {
+    width:max-content;
+    min-width:100%;
+}
+
+.profile-dialog {
+    width:min(100%, 620px);
+}
+
+.scanner-dialog {
+    width:min(100%, 500px);
+}
+
+@media (max-width:700px) {
+    .hr-action-dialog,
+    .profile-dialog,
+    .scanner-dialog,
+    .hr-report-dialog {
+        width:calc(100vw - 28px) !important;
+        min-width:0;
+        max-width:calc(100vw - 28px) !important;
+        max-height:calc(100vh - 28px) !important;
+    }
+
+    .hr-report-dialog .hr-report-table-wrap {
+        max-width:calc(100vw - 70px);
+        max-height:calc(100vh - 280px);
+    }
+}
+
+/* HR panel polish after moving Policy Updates to the right card */
+.hr-workspace {
+    align-items:start;
+}
+
+.hr-feature {
+    height:auto;
+    min-height:0;
+}
+
+.hr-task-list {
+    padding-top:10px;
+}
+
+/* Keep Policy Updates as the dedicated right-side placeholder/card */
+.hr-side article:has(#openPolicyCenter) {
+    min-height:0;
+}
+
+.policy-detail-back {
+    margin:0 0 10px;
+}
+
+#hrReportTitle .policy-detail-back + br {
+    display:block;
+}
+
+/* Registered guards controls: Manage Personnel first, search second */
+.directory-head-actions {
+    justify-content:flex-end;
+}
+
+.directory-head-actions #managePersonnelBtn {
+    order:1;
+}
+
+.directory-head-actions .directory-search {
+    order:2;
+}
+
+@media (max-width:700px) {
+    .directory-head-actions #managePersonnelBtn,
+    .directory-head-actions .directory-search {
+        order:initial;
+        width:100%;
+    }
+}
+
+/* Fill HR workspace cards evenly now that workflow has two tasks */
+.hr-workspace {
+    align-items:stretch !important;
+}
+
+.hr-feature {
+    display:flex;
+    flex-direction:column;
+    height:100%;
+    min-height:330px;
+}
+
+.hr-feature .hr-task-list {
+    flex:1;
+    display:grid;
+    grid-template-rows:repeat(2, minmax(84px, 1fr));
+    gap:14px;
+    margin-top:22px;
+    padding-top:14px;
+}
+
+.hr-feature .hr-task-list button {
+    height:100%;
+    margin-top:0;
+    align-items:center;
+}
+
+.hr-side {
+    height:100%;
+}
+
+.hr-side article {
+    flex:1;
+    display:flex;
+    flex-direction:column;
+}
+
+.hr-side article .employee-search {
+    margin-top:18px;
+}
+
+.hr-side article .policy-card-actions,
+.hr-side article #openEmployeeDirectory {
+    margin-top:auto;
+}
+
+.hr-side article .request-row:last-of-type {
+    margin-bottom:14px;
+}
+
+@media (max-width:1100px) {
+    .hr-feature {
+        min-height:0;
+    }
+
+    .hr-feature .hr-task-list {
+        grid-template-rows:none;
+    }
+
+    .hr-side article {
+        flex:none;
+    }
+}
+
+/* Policy Center selection and delete controls */
+#hrReportDate:has(#deleteSelectedPolicy) {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+}
+
+.policy-delete-selected,
+.policy-delete-confirm {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid #dc2626;
+    border-radius:10px;
+    background:#dc2626;
+    color:#fff;
+    font:800 11px 'DM Sans';
+    cursor:pointer;
+    transition:background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .16s ease, opacity .16s ease;
+}
+
+.policy-delete-selected {
+    padding:9px 13px;
+    border-radius:999px;
+}
+
+.policy-delete-selected:hover:not(:disabled),
+.policy-delete-confirm:hover {
+    background:#b91c1c;
+    border-color:#b91c1c;
+    box-shadow:0 8px 18px #dc262633;
+    transform:translateY(-1px);
+}
+
+.policy-delete-selected:active:not(:disabled),
+.policy-delete-confirm:active {
+    transform:translateY(0) scale(.97);
+}
+
+.policy-delete-selected:disabled {
+    opacity:.42;
+    cursor:not-allowed;
+    box-shadow:none;
+}
+
+.policy-select-cell {
+    width:88px;
+}
+
+.policy-select-option {
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    color:#315ce9;
+    font:800 11px 'DM Sans';
+    cursor:pointer;
+    user-select:none;
+}
+
+.policy-select-option input {
+    width:15px;
+    height:15px;
+    accent-color:#315ce9;
+    cursor:pointer;
+}
+
+.policy-delete-warning {
+    padding:14px;
+    border:1px solid #fecaca;
+    border-radius:14px;
+    background:#fff5f5;
+    color:#1f2937;
+}
+
+.policy-delete-warning strong,
+.policy-delete-warning small {
+    display:block;
+}
+
+.policy-delete-warning small {
+    margin-top:5px;
+    color:#7f1d1d;
+    line-height:1.45;
+}
+
+.policy-delete-actions {
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:14px;
+}
+
+.policy-delete-cancel {
+    border:1px solid #d8deea;
+    border-radius:10px;
+    background:#fff;
+    color:#475569;
+    font:800 11px 'DM Sans';
+    cursor:pointer;
+    padding:10px 14px;
+}
+
+.policy-delete-confirm {
+    padding:10px 14px;
+}
+
+/* Policy deletion: icon-only button, checkbox selection mode, confirmation in front */
+#hrActionModal {
+    z-index:120 !important;
+}
+
+#hrReportModal {
+    z-index:90;
+}
+
+.policy-delete-selected {
+    width:42px;
+    height:36px;
+    padding:0;
+    border-radius:999px;
+    background:#ef4444;
+    border-color:#ef4444;
+}
+
+.policy-delete-selected img,
+.policy-delete-confirm img {
+    display:block;
+    width:16px;
+    height:16px;
+    object-fit:contain;
+    filter:brightness(0) invert(1);
+    pointer-events:none;
+}
+
+.policy-select-cell {
+    width:74px;
+    text-align:center;
+}
+
+.policy-row-checkbox,
+.policy-select-all input {
+    width:16px;
+    height:16px;
+    accent-color:#315ce9;
+    cursor:pointer;
+}
+
+.policy-select-all {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    color:#17213a;
+    font:800 10px 'DM Sans';
+    letter-spacing:.09em;
+    text-transform:uppercase;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.policy-delete-warning {
+    display:grid;
+    gap:10px;
+}
+
+.policy-delete-item + .policy-delete-item {
+    padding-top:10px;
+    border-top:1px solid #fecaca;
+}
+
+.policy-delete-confirm {
+    gap:7px;
+}
+
+/* Respect hidden date control in report dialogs (dashboard View all has no date picker) */
+#hrAttendanceDateControl[hidden] {
+    display:none !important;
+}
+
+/* Payroll salary setup and automated payroll preview */
+.payroll-table-wrap {
+    width:100%;
+    overflow:auto;
+    border:1px solid #edf0f5;
+    border-radius:14px;
+    background:#fff;
+}
+
+.payroll-salary-table {
+    width:100%;
+    min-width:820px;
+    border-collapse:collapse;
+    font-size:12px;
+}
+
+.payroll-salary-table th {
+    padding:10px 12px;
+    background:#f7f9fd;
+    color:#31405f;
+    font:800 10px 'DM Sans';
+    letter-spacing:.08em;
+    text-align:left;
+    text-transform:uppercase;
+}
+
+.payroll-salary-table td {
+    padding:10px 12px;
+    border-top:1px solid #edf0f5;
+    vertical-align:middle;
+}
+
+.payroll-salary-table td strong,
+.payroll-salary-table td small {
+    display:block;
+}
+
+.payroll-salary-table td small {
+    margin-top:3px;
+    color:#7d879b;
+    font-size:10px;
+}
+
+.payroll-salary-table input {
+    width:100%;
+    min-width:82px;
+    padding:8px 9px;
+    border:1px solid #dce3ef;
+    border-radius:9px;
+    font:700 11px 'DM Sans';
+}
+
+.payroll-salary-table input:focus {
+    outline:2px solid #c9d8ff;
+    border-color:#315ce9;
+}
+
+.payroll-helper {
+    color:#7d879b;
+    font-size:11px;
+    margin:10px 0 0;
+}
+
+.payroll-summary-strip {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+    padding:12px 14px;
+    margin-bottom:12px;
+    border:1px solid #dbe5ff;
+    border-radius:14px;
+    background:#f5f8ff;
+    color:#536077;
+    font-size:12px;
+}
+
+.payroll-summary-strip strong {
+    color:#17213a;
+}
+
+.payroll-finalize {
+    margin-top:14px;
+}
+
+.payroll-adjustment-list {
+    margin-top:16px;
+}
+
+.payroll-adjustment-list h3 {
+    margin:0 0 10px;
+    color:#17213a;
+    font:800 14px Manrope;
+}
+
+.payroll-adjustment-form {
+    padding-bottom:12px;
+    border-bottom:1px solid #edf0f5;
+}
+
+/* Payroll panel: expanded current pay period with live pay-run graph */
+.payroll-side {
+    min-height:100%;
+}
+
+.payroll-period-card {
+    min-height:100%;
+}
+
+.payroll-period-head {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:12px;
+}
+
+.payroll-period-head h2 {
+    margin-top:0;
+}
+
+.payroll-period-review {
+    flex:none;
+    margin-top:2px;
+    white-space:nowrap;
+}
+
+.payroll-graph-card {
+    margin-top:18px;
+    padding:15px;
+    border:1px solid #dbe5ff;
+    border-radius:16px;
+    background:linear-gradient(180deg,#f8fbff 0%,#ffffff 100%);
+}
+
+.payroll-graph-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:13px;
+}
+
+.payroll-graph-head strong {
+    color:#17213a;
+    font:800 13px Manrope;
+}
+
+.payroll-graph-head span {
+    color:#7d879b;
+    font-size:11px;
+}
+
+.payroll-graph {
+    display:grid;
+    gap:12px;
+}
+
+.payroll-graph-row {
+    display:grid;
+    grid-template-columns:minmax(120px,1fr) minmax(110px,1.3fr) auto;
+    align-items:center;
+    gap:10px;
+}
+
+.payroll-graph-meta strong,
+.payroll-graph-meta span {
+    display:block;
+}
+
+.payroll-graph-meta strong {
+    overflow:hidden;
+    color:#17213a;
+    font:800 11px 'DM Sans';
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.payroll-graph-meta span {
+    margin-top:2px;
+    color:#7d879b;
+    font-size:10px;
+}
+
+.payroll-graph-track {
+    height:10px;
+    overflow:hidden;
+    border-radius:999px;
+    background:#edf2ff;
+}
+
+.payroll-graph-track span {
+    display:block;
+    height:100%;
+    border-radius:inherit;
+    background:linear-gradient(90deg,#315ce9,#18a0b8);
+    transition:width .35s ease;
+}
+
+.payroll-graph-row.missing .payroll-graph-track span {
+    background:linear-gradient(90deg,#f59e0b,#f8c15c);
+}
+
+.payroll-graph-row b {
+    color:#315ce9;
+    font:900 11px 'DM Sans';
+    white-space:nowrap;
+}
+
+.payroll-graph-empty {
+    padding:24px 10px;
+    color:#8a94a8;
+    text-align:center;
+    font:700 12px 'DM Sans';
+}
+
+@media (max-width:900px) {
+    .payroll-period-head,
+    .payroll-graph-head {
+        flex-direction:column;
+    }
+
+    .payroll-graph-row {
+        grid-template-columns:1fr;
+    }
+}
+
+.payroll-adjustment-delete {
+    padding:7px 10px;
+    border:1px solid #fecaca;
+    border-radius:9px;
+    background:#fff5f5;
+    color:#dc2626;
+    font:800 10px 'DM Sans';
+    cursor:pointer;
+    transition:background .18s ease, transform .16s ease, box-shadow .18s ease;
+}
+
+.payroll-adjustment-delete:hover {
+    background:#fee2e2;
+    box-shadow:0 6px 14px #dc26261f;
+    transform:translateY(-1px);
+}
+
+/* Clean payroll current-period placeholder/card formatting */
+.payroll-period-card {
+    padding:24px !important;
+    min-height:0;
+}
+
+.payroll-period-card .request-row {
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:16px;
+    align-items:center;
+    padding:13px 0;
+}
+
+.payroll-period-card .request-row b {
+    display:inline-flex;
+    width:auto;
+    min-width:88px;
+    height:auto;
+    min-height:24px;
+    justify-content:flex-end;
+    place-items:unset;
+    padding:0;
+    border-radius:0;
+    background:transparent;
+    color:#315ce9;
+    font:900 12px 'DM Sans';
+    line-height:1.25;
+    text-align:right;
+    white-space:nowrap;
+}
+
+.payroll-period-card #payrollProcessingStatus {
+    max-width:120px;
+    white-space:normal;
+}
+
+.payroll-graph-card {
+    margin-top:18px;
+    padding:18px;
+    border-color:#c9d8ff;
+    box-shadow:inset 0 1px 0 #ffffff, 0 10px 24px #315ce90d;
+}
+
+.payroll-graph-head {
+    padding-bottom:10px;
+    border-bottom:1px solid #edf2ff;
+}
+
+.payroll-graph-head strong {
+    font-size:14px;
+}
+
+.payroll-graph-row {
+    grid-template-columns:minmax(150px,1.15fr) minmax(150px,1.5fr) minmax(72px,auto);
+    padding:2px 0;
+}
+
+.payroll-graph-track {
+    height:12px;
+    background:#eaf0ff;
+}
+
+.payroll-graph-track span[style="width:0%"] {
+    width:0 !important;
+}
+
+.payroll-graph-row b {
+    min-width:72px;
+    text-align:right;
+}
+
+@media (max-width:1200px) {
+    .payroll-graph-row {
+        grid-template-columns:1fr;
+        gap:6px;
+    }
+
+    .payroll-graph-row b {
+        text-align:left;
+    }
+}
+
+/* Sidebar logout button replacing Settings */
+.logout-button {
+    width:100%;
+    height:47px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin:0 0 12px;
+    padding:0 13px;
+    border:0;
+    border-radius:10px;
+    background:transparent;
+    color:#7c879a;
+    font:600 13px 'DM Sans';
+    cursor:pointer;
+    text-align:left;
+    transition:background .22s ease, color .22s ease, transform .18s ease, box-shadow .22s ease;
+}
+
+.logout-button b {
+    font-weight:600;
+}
+
+.logout-icon {
+    width:24px;
+    height:24px;
+    display:grid;
+    place-items:center;
+    border-radius:8px;
+    color:#ef4444;
+    font-size:17px;
+    transition:background .22s ease, color .22s ease, transform .22s ease;
+}
+
+.logout-button:hover {
+    background:#fff1f2;
+    color:#dc2626;
+    box-shadow:0 8px 18px #ef44441a;
+    transform:translateX(2px);
+}
+
+.logout-button:hover .logout-icon {
+    background:#fee2e2;
+    transform:translateX(2px);
+}
+
+.logout-button:active {
+    transform:translateX(1px) scale(.98);
+}
+
+/* Admin account CRUD management modal */
+.manage-account-btn {
+    padding:8px 14px;
+    border:1px solid #c9d8ff;
+    border-radius:10px;
+    background:#eef2ff;
+    color:#315ce9;
+    font:800 11px 'DM Sans';
+    cursor:pointer;
+    transition:background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .16s ease;
+}
+
+.manage-account-btn:hover {
+    background:#e2e9ff;
+    border-color:#315ce9;
+    box-shadow:0 7px 18px #315ce91f;
+    transform:translateY(-1px);
+}
+
+.account-manage-form {
+    margin-top:8px;
+}
+
+.account-manage-grid {
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:12px;
+}
+
+.account-manage-grid label {
+    display:grid;
+    gap:6px;
+    color:#202c49;
+    font:800 11px 'DM Sans';
+}
+
+.account-manage-grid label span {
+    float:right;
+    color:#8a94a8;
+    font-weight:700;
+}
+
+.account-manage-grid .wide {
+    grid-column:1 / -1;
+}
+
+.account-manage-grid input,
+.account-manage-grid select {
+    width:100%;
+    min-height:39px;
+    padding:10px 12px;
+    border:1px solid #d8deea;
+    border-radius:10px;
+    background:#fff;
+    color:#17213a;
+    font:700 12px 'DM Sans';
+}
+
+.account-manage-grid input:focus,
+.account-manage-grid select:focus {
+    outline:2px solid #c9d8ff;
+    border-color:#315ce9;
+}
+
+.account-manage-actions {
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:16px;
+    padding-top:14px;
+    border-top:1px solid #edf0f5;
+}
+
+.account-delete-btn {
+    padding:10px 14px;
+    border:1px solid #fecaca;
+    border-radius:10px;
+    background:#fff5f5;
+    color:#dc2626;
+    font:800 11px 'DM Sans';
+    cursor:pointer;
+    transition:background .18s ease, transform .16s ease, box-shadow .18s ease;
+}
+
+.account-delete-btn:hover {
+    background:#fee2e2;
+    box-shadow:0 8px 18px #dc26261f;
+    transform:translateY(-1px);
+}
+
+@media (max-width:720px) {
+    .account-manage-grid {
+        grid-template-columns:1fr;
+    }
+}
+
+/* Manage Account modal button order: Deactivate/Reactivate left, Save + Delete right */
+.account-manage-actions {
+    justify-content:flex-start;
+}
+
+.account-manage-actions .account-status-action,
+.account-manage-actions .account-save-btn,
+.account-manage-actions .account-delete-btn {
+    min-height:38px;
+    padding:10px 15px;
+    border-radius:10px;
+    font:800 11px 'DM Sans';
+}
+
+.account-manage-actions .account-status-action {
+    border:1px solid #fecaca;
+    background:#fff5f5;
+    color:#dc2626;
+}
+
+.account-manage-actions .account-status-action.approve-account {
+    border-color:#bbf7d0;
+    background:#ecfdf5;
+    color:#15803d;
+}
+
+.account-manage-actions .account-save-btn {
+    margin-left:auto;
+}
+
+.account-manage-actions .account-status-action:hover,
+.account-manage-actions .account-delete-btn:hover {
+    transform:translateY(-1px);
+}
+
+/* Admin realtime attendance trend */
+#adminAttendanceTrend .trend-bar {
+    position:relative;
+    display:grid;
+    grid-template-rows:1fr auto;
+    align-items:end;
+    gap:8px;
+}
+
+#adminAttendanceTrend .trend-bar b {
+    position:absolute;
+    top:4px;
+    left:50%;
+    transform:translateX(-50%);
+    color:#315ce9;
+    font:900 11px 'DM Sans';
+}
+
+#adminAttendanceTrend .trend-bar i {
+    min-height:0;
+    transition:height .35s ease, opacity .25s ease;
+}
+
+#adminAttendanceTrend .trend-bar.empty i {
+    height:0 !important;
+    opacity:.2;
+}
+
+#adminAttendanceTrend .trend-bar.empty b {
+    color:#9aa4b8;
+}
+
+.admin-exception-table {
+    min-width:720px;
+}
+
+/* Convert remaining dashboard text links into clear action buttons */
+.payroll-period-review,
+#reviewExceptions {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:36px;
+    padding:9px 14px !important;
+    border:1px solid #c9d8ff !important;
+    border-radius:999px;
+    background:#eef2ff !important;
+    color:#315ce9 !important;
+    font:800 11px 'DM Sans' !important;
+    text-decoration:none;
+    transition:background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .16s ease;
+}
+
+.payroll-period-review:hover,
+#reviewExceptions:hover {
+    background:#e4ebff !important;
+    border-color:#315ce9 !important;
+    box-shadow:0 7px 18px #315ce91f;
+    transform:translateY(-1px);
+}
+
+.payroll-period-review:active,
+#reviewExceptions:active {
+    transform:translateY(0) scale(.97);
+}
