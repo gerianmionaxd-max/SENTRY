@@ -3179,3 +3179,730 @@ body.admin-panel-active .admin-panel:not([hidden]) {
 .attendance-card .table-wrap table {
     min-width:820px;
 }
+
+/* Attendance date selector as a proper animated button */
+.filters .date-button {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    min-height:37px;
+    padding:9px 14px;
+    border:1px solid #c9d8ff;
+    border-radius:10px;
+    background:#fff;
+    color:#315ce9;
+    font:800 12px 'DM Sans';
+    box-shadow:0 4px 12px #2338670a;
+}
+
+.filters .date-button::after {
+    content:'';
+    width:6px;
+    height:6px;
+    border-right:2px solid currentColor;
+    border-bottom:2px solid currentColor;
+    transform:rotate(45deg) translateY(-2px);
+}
+
+.filters .date-button:hover {
+    background:#eef2ff;
+    border-color:#315ce9;
+    box-shadow:0 8px 18px #315ce91f;
+}
+
+/* Empty on-duty carousel state */
+.staff-track:has(.empty-staff-card) {
+    justify-content:center;
+}
+
+.empty-staff-card {
+    min-width:245px;
+    width:245px;
+    min-height:210px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    opacity:.45;
+    pointer-events:none;
+    box-shadow:none;
+}
+
+.empty-staff-card h3 {
+    margin:0;
+    color:#202c49;
+    font:800 15px Manrope, sans-serif;
+    text-align:center;
+}
+
+.empty-staff-card:hover {
+    transform:none;
+    background:#fff;
+    color:#202c49;
+    border-color:#e8ecf3;
+    box-shadow:none;
+}
+
+/* Date picker split into formatted date button + adjacent calendar button */
+.attendance-date-control {
+    margin-left:auto;
+    display:flex;
+    align-items:center;
+    gap:7px;
+}
+
+.filters .attendance-date-control .date-button {
+    margin-left:0;
+    min-width:132px;
+    border-radius:10px;
+}
+
+.filters .attendance-date-control .date-button::after {
+    content:none;
+}
+
+.calendar-icon-button {
+    position:relative;
+    width:38px;
+    height:37px;
+    flex:none;
+    display:grid;
+    place-items:center;
+    border:1px solid #c9d8ff;
+    border-radius:10px;
+    background:#fff;
+    color:#315ce9;
+    box-shadow:0 4px 12px #2338670a;
+    cursor:pointer;
+    transition:background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.calendar-icon-button::before {
+    content:'▣';
+    font-size:12px;
+    line-height:1;
+}
+
+.calendar-icon-button::after {
+    content:'';
+    width:6px;
+    height:6px;
+    margin-left:1px;
+    border-right:2px solid currentColor;
+    border-bottom:2px solid currentColor;
+    transform:rotate(45deg) translateY(-1px);
+}
+
+.calendar-icon-button:hover {
+    background:#eef2ff;
+    border-color:#315ce9;
+    box-shadow:0 8px 18px #315ce91f;
+    transform:translateY(-1px);
+}
+
+.calendar-icon-button:active {
+    transform:translateY(0) scale(.98);
+}
+
+.calendar-icon-button .date-picker-native {
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    opacity:0;
+    cursor:pointer;
+    pointer-events:auto;
+}
+
+/* Final carousel empty state: faded text only, no card box */
+.staff-track:has(.empty-staff-card) {
+    justify-content:center;
+    min-height:210px;
+}
+
+.empty-staff-card,
+.empty-staff-card:hover {
+    min-width:0;
+    width:auto;
+    min-height:210px;
+    padding:0;
+    border:0;
+    background:transparent;
+    box-shadow:none;
+    opacity:.48;
+    color:#7d879b;
+    transform:none;
+}
+
+.empty-staff-card h3 {
+    color:#536077;
+    font:800 16px Manrope, sans-serif;
+}
+
+/* Single date button with custom pop-up calendar */
+.attendance-date-control {
+    position:relative;
+    margin-left:auto;
+    display:block;
+}
+
+.filters .attendance-date-control .date-button {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    min-width:156px;
+    min-height:39px;
+    margin-left:0;
+    padding:9px 14px;
+    border:1px solid #c9d8ff;
+    border-radius:10px;
+    background:#fff;
+    color:#315ce9;
+    font:800 12px 'DM Sans';
+    box-shadow:0 4px 12px #2338670a;
+}
+
+.filters .attendance-date-control .date-button::after {
+    content:'';
+    width:7px;
+    height:7px;
+    border-right:2px solid currentColor;
+    border-bottom:2px solid currentColor;
+    transform:rotate(45deg) translateY(-2px);
+}
+
+.calendar-icon-button {
+    display:none !important;
+}
+
+.calendar-popover {
+    position:absolute;
+    z-index:30;
+    top:calc(100% + 10px);
+    right:0;
+    width:246px;
+    padding:12px;
+    border:1px solid #dfe6f5;
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 18px 45px #17213a26;
+    animation:calendarPop .18s ease;
+}
+
+.calendar-popover[hidden] {
+    display:none;
+}
+
+@keyframes calendarPop {
+    from { opacity:0; transform:translateY(-8px) scale(.98); }
+}
+
+.calendar-popover-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:10px;
+}
+
+.calendar-popover-head strong {
+    color:#202c49;
+    font:800 13px Manrope, sans-serif;
+}
+
+.calendar-popover-head button {
+    width:32px;
+    height:32px;
+    border:0;
+    border-radius:10px;
+    background:#f4f7ff;
+    color:#202c49;
+    font:800 20px/1 'DM Sans';
+    cursor:pointer;
+    transition:background .18s ease, transform .16s ease;
+}
+
+.calendar-popover-head button:hover {
+    background:#e8efff;
+    transform:translateY(-1px);
+}
+
+.calendar-weekdays,
+.calendar-days {
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:5px;
+}
+
+.calendar-weekdays span {
+    display:grid;
+    place-items:center;
+    height:24px;
+    color:#14aa9a;
+    font:800 10px 'DM Sans';
+}
+
+.calendar-day {
+    height:28px;
+    border:0;
+    border-radius:9px;
+    background:transparent;
+    color:#202c49;
+    font:700 11px 'DM Sans';
+    cursor:pointer;
+    transition:background .16s ease, color .16s ease, transform .14s ease, box-shadow .16s ease;
+}
+
+.calendar-day.outside {
+    color:#b6bfce;
+}
+
+.calendar-day.today {
+    box-shadow:inset 0 0 0 1px #31d5c2;
+}
+
+.calendar-day.selected {
+    background:linear-gradient(145deg,#31d5c2,#19a99a);
+    color:#fff;
+    box-shadow:0 6px 14px #20bfae45;
+}
+
+.calendar-day:hover {
+    background:#eef2ff;
+    color:#315ce9;
+    transform:translateY(-1px);
+}
+
+.calendar-day.selected:hover {
+    background:linear-gradient(145deg,#31d5c2,#19a99a);
+    color:#fff;
+}
+
+.calendar-apply {
+    width:100%;
+    margin-top:12px;
+    border:0;
+    border-radius:11px;
+    padding:11px;
+    background:#202c49;
+    color:#fff;
+    font:800 12px 'DM Sans';
+    cursor:pointer;
+    transition:transform .16s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.calendar-apply:hover {
+    background:#17213a;
+    box-shadow:0 8px 18px #17213a2b;
+    transform:translateY(-1px);
+}
+
+.calendar-apply:active {
+    transform:translateY(0) scale(.98);
+}
+
+/* Dynamic layout fixes: panels/windows size to their content instead of stretching */
+.content-grid {
+    align-items:start;
+}
+
+.attendance-card.panel,
+.analytics-card,
+.guard-directory,
+.active-accounts-page,
+.pending-accounts-card,
+.access-assignment-card {
+    height:auto;
+    min-height:0;
+}
+
+.attendance-card .table-wrap,
+.directory-table-wrap,
+.pending-table-wrap {
+    height:auto;
+    min-height:0;
+}
+
+.attendance-card .table-wrap table {
+    min-width:min(820px, 100%);
+}
+
+/* Directory / management windows should fit the viewport and not appear zoomed/cropped */
+.active-accounts-page {
+    width:calc(100% - 96px);
+    max-width:none;
+    margin:42px 48px 35px;
+    overflow:visible;
+}
+
+.active-accounts-page .directory-table,
+.active-accounts-page .manage-accounts-table,
+.active-accounts-page .active-accounts-detail-table {
+    width:100%;
+    table-layout:auto;
+}
+
+.active-accounts-page .directory-table-wrap {
+    width:100%;
+    overflow-x:auto;
+}
+
+/* Final no-duty placeholder: no box, just centered faded text */
+.staff-track:has(.empty-staff-card) {
+    min-height:120px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+}
+
+.empty-staff-card,
+.empty-staff-card:hover {
+    min-width:0 !important;
+    width:auto !important;
+    min-height:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    opacity:.52;
+    color:#7d879b !important;
+    transform:none !important;
+}
+
+.empty-staff-card h3 {
+    margin:0;
+    color:#7d879b !important;
+    font:800 16px Manrope, sans-serif;
+    text-align:center;
+}
+
+@media (max-width:1100px) {
+    .active-accounts-page {
+        width:calc(100% - 40px);
+        margin:28px 20px;
+    }
+}
+
+/* Fix account-storage subpages changing/overflowing the interface */
+.active-accounts-page {
+    width:auto !important;
+    max-width:none !important;
+    margin:42px 48px 35px !important;
+    box-sizing:border-box;
+}
+
+.active-accounts-page .directory-table-wrap {
+    width:100%;
+    max-width:100%;
+    overflow-x:auto;
+}
+
+.active-accounts-page .directory-table,
+.active-accounts-page .active-accounts-detail-table,
+.active-accounts-page .manage-accounts-table {
+    width:100% !important;
+    min-width:0 !important;
+    table-layout:auto;
+}
+
+.active-accounts-page th,
+.active-accounts-page td {
+    white-space:normal;
+}
+
+.active-accounts-detail-table .account-address-cell {
+    max-width:520px;
+    min-width:0 !important;
+    overflow-wrap:anywhere;
+}
+
+.manage-accounts-table td,
+.manage-accounts-table th {
+    overflow-wrap:anywhere;
+}
+
+@media (max-width:1100px) {
+    .active-accounts-page {
+        margin:28px 20px !important;
+    }
+}
+
+/* Keep Account Storage sub-windows aligned to the Admin dashboard viewport */
+body.admin-panel-active .active-accounts-page:not([hidden]) {
+    position:fixed !important;
+    top:42px !important;
+    left:calc(244px + 48px) !important;
+    right:48px !important;
+    bottom:auto !important;
+    width:auto !important;
+    max-width:none !important;
+    max-height:calc(100vh - 84px) !important;
+    margin:0 !important;
+    overflow:auto !important;
+    z-index:9;
+    background:#fff;
+    border:1px solid #e8ecf3;
+    border-radius:13px;
+    box-shadow:0 3px 10px #23386708;
+}
+
+body.admin-panel-active .active-accounts-page .directory-head {
+    align-items:flex-end;
+}
+
+body.admin-panel-active .active-accounts-page .directory-table-wrap {
+    overflow-x:auto;
+    max-width:100%;
+}
+
+@media (max-width:1100px) {
+    body.admin-panel-active .active-accounts-page:not([hidden]) {
+        left:calc(70px + 28px) !important;
+        right:28px !important;
+        top:28px !important;
+        max-height:calc(100vh - 56px) !important;
+    }
+}
+
+@media (max-width:700px) {
+    body.admin-panel-active .active-accounts-page:not([hidden]) {
+        left:20px !important;
+        right:20px !important;
+        top:20px !important;
+        max-height:calc(100vh - 40px) !important;
+    }
+}
+
+/* Keep the sidebar and viewport stable when opening account sub-windows */
+html {
+    scrollbar-gutter:stable;
+}
+
+.sidebar {
+    width:244px !important;
+    min-width:244px !important;
+    max-width:244px !important;
+    flex:0 0 244px !important;
+}
+
+main {
+    margin-left:244px !important;
+}
+
+body.admin-panel-active .active-accounts-page:not([hidden]) {
+    /* Overlay the dashboard content instead of replacing it, so the sidebar never reflows/resizes. */
+    left:292px !important; /* 244px sidebar + 48px content gutter */
+    right:48px !important;
+}
+
+body.admin-panel-active .admin-panel:not([hidden]) {
+    display:block;
+}
+
+@media (max-width:1100px) {
+    .sidebar {
+        width:70px !important;
+        min-width:70px !important;
+        max-width:70px !important;
+        flex-basis:70px !important;
+    }
+
+    main {
+        margin-left:70px !important;
+    }
+
+    body.admin-panel-active .active-accounts-page:not([hidden]) {
+        left:98px !important; /* 70px collapsed sidebar + 28px gutter */
+        right:28px !important;
+    }
+}
+
+@media (max-width:700px) {
+    main {
+        margin-left:0 !important;
+    }
+
+    body.admin-panel-active .active-accounts-page:not([hidden]) {
+        left:20px !important;
+        right:20px !important;
+    }
+}
+
+/* Emergency fix: account pages are normal dashboard pages again so they do not block clicks. */
+body.admin-panel-active .active-accounts-page:not([hidden]) {
+    position:static !important;
+    inset:auto !important;
+    left:auto !important;
+    right:auto !important;
+    top:auto !important;
+    bottom:auto !important;
+    z-index:auto !important;
+    width:auto !important;
+    max-width:none !important;
+    max-height:none !important;
+    margin:42px 48px 35px !important;
+    overflow:visible !important;
+    pointer-events:auto !important;
+}
+
+.active-accounts-page[hidden],
+#activeAccountsPage[hidden],
+#manageAccountsPage[hidden] {
+    display:none !important;
+    pointer-events:none !important;
+}
+
+/* Keep the sidebar size stable while subpages are shown. */
+.sidebar {
+    position:fixed !important;
+    left:0;
+    top:0;
+    width:244px !important;
+    min-width:244px !important;
+    max-width:244px !important;
+    height:100vh !important;
+}
+
+main {
+    margin-left:244px !important;
+    width:calc(100% - 244px) !important;
+    max-width:none !important;
+}
+
+@media (max-width:1100px) {
+    .sidebar {
+        width:70px !important;
+        min-width:70px !important;
+        max-width:70px !important;
+    }
+
+    main {
+        margin-left:70px !important;
+        width:calc(100% - 70px) !important;
+    }
+
+    body.admin-panel-active .active-accounts-page:not([hidden]) {
+        margin:28px 20px !important;
+    }
+}
+
+@media (max-width:700px) {
+    .sidebar {
+        display:none !important;
+    }
+
+    main {
+        margin-left:0 !important;
+        width:100% !important;
+    }
+}
+
+/* Attendance date moved from dashboard filters into the Attendance Logs window */
+.filters > .attendance-date-control {
+    display:none !important;
+}
+
+.hr-report-actions {
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-left:auto;
+}
+
+.hr-report-bar .attendance-date-control {
+    position:relative;
+    margin-left:0;
+}
+
+.hr-report-bar .date-button {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    min-width:156px;
+    min-height:38px;
+    padding:9px 14px;
+    border:1px solid #c9d8ff;
+    border-radius:10px;
+    background:#fff;
+    color:#315ce9;
+    font:800 12px 'DM Sans';
+    box-shadow:0 4px 12px #2338670a;
+    cursor:pointer;
+    transition:background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.hr-report-bar .date-button::after {
+    content:'';
+    width:7px;
+    height:7px;
+    border-right:2px solid currentColor;
+    border-bottom:2px solid currentColor;
+    transform:rotate(45deg) translateY(-2px);
+}
+
+.hr-report-bar .date-button:hover {
+    background:#eef2ff;
+    border-color:#315ce9;
+    box-shadow:0 8px 18px #315ce91f;
+    transform:translateY(-1px);
+}
+
+.hr-report-bar .calendar-popover {
+    right:0;
+    top:calc(100% + 10px);
+}
+
+@media (max-width:700px) {
+    .hr-report-bar {
+        align-items:flex-start;
+        flex-direction:column;
+    }
+
+    .hr-report-actions {
+        width:100%;
+        justify-content:flex-start;
+    }
+}
+
+/* Fix Attendance Logs calendar pop-up clipping inside the report modal */
+.hr-report-dialog {
+    overflow:visible !important;
+    max-height:calc(100vh - 80px) !important;
+}
+
+.hr-report-bar,
+.hr-report-actions,
+.hr-report-bar .attendance-date-control {
+    position:relative;
+    z-index:60;
+    overflow:visible !important;
+}
+
+.hr-report-table-wrap {
+    position:relative;
+    z-index:1;
+}
+
+#attendanceCalendar.calendar-popover {
+    z-index:1000;
+    right:0;
+    top:calc(100% + 10px);
+    max-height:min(420px, calc(100vh - 220px));
+    overflow:auto;
+}
+
+#attendanceCalendar.calendar-popover[hidden] {
+    display:none !important;
+}
+
+@media (max-height:720px) {
+    #attendanceCalendar.calendar-popover {
+        top:auto;
+        bottom:calc(100% + 10px);
+    }
+}

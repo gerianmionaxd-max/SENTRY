@@ -794,6 +794,7 @@ function initAuthentication() {
 
 let activeAttendanceFilter = 'all';
 let selectedAttendanceDate = new Date();
+let calendarViewDate = new Date(selectedAttendanceDate.getFullYear(), selectedAttendanceDate.getMonth(), 1);
 
 function dateInputValue(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -809,22 +810,56 @@ function sameCalendarDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+function formatAttendanceDate(date) {
+  const months = ['Jan.', 'Feb.', 'Mar.', 'Apr.', 'May', 'Jun.', 'Jul.', 'Aug.', 'Sept.', 'Oct.', 'Nov.', 'Dec.'];
+  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+}
+
 function updateAttendanceDateLabel() {
   const label = $('#attendanceDateLabel');
-  const picker = $('#attendanceDatePicker');
-  if (label) {
-    label.textContent = selectedAttendanceDate.toLocaleDateString('en-PH', {
-      day: '2-digit', month: 'short', year: 'numeric',
-    });
+  if (label) label.textContent = formatAttendanceDate(selectedAttendanceDate);
+}
+
+function renderAttendanceCalendar() {
+  const calendar = $('#attendanceCalendar');
+  if (!calendar) return;
+  const monthLabel = $('#calendarMonthLabel');
+  const daysGrid = $('#calendarDays');
+  const year = calendarViewDate.getFullYear();
+  const month = calendarViewDate.getMonth();
+  monthLabel.textContent = calendarViewDate.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
+
+  const firstDay = new Date(year, month, 1);
+  const start = new Date(year, month, 1 - firstDay.getDay());
+  const days = [];
+  for (let index = 0; index < 42; index += 1) {
+    const day = new Date(start);
+    day.setDate(start.getDate() + index);
+    const outside = day.getMonth() !== month;
+    const selected = sameCalendarDay(day, selectedAttendanceDate);
+    const today = sameCalendarDay(day, new Date());
+    days.push(`<button type="button" class="calendar-day${outside ? ' outside' : ''}${selected ? ' selected' : ''}${today ? ' today' : ''}" data-date="${dateInputValue(day)}">${day.getDate()}</button>`);
   }
-  if (picker) picker.value = dateInputValue(selectedAttendanceDate);
+  daysGrid.innerHTML = days.join('');
+}
+
+function closeAttendanceCalendar() {
+  const calendar = $('#attendanceCalendar');
+  if (calendar) calendar.hidden = true;
+}
+
+function applyAttendanceCalendar(toast) {
+  closeAttendanceCalendar();
+  updateAttendanceDateLabel();
+  document.dispatchEvent(new CustomEvent('attendance-date-applied'));
+  toast(`Showing attendance logs for ${$('#attendanceDateLabel').textContent}`);
 }
 
 function initAttendance(toast) {
   const filters = $$('.filter');
   const searchInput = $('#qrSearch');
   const dateButton = $('#attendanceDateButton');
-  const datePicker = $('#attendanceDatePicker');
+  const calendar = $('#attendanceCalendar');
 
   const rows = () => $$('#attendanceRows tr[data-status]');
   const showRows = predicate => rows().forEach(row => { row.hidden = !predicate(row); });
@@ -855,17 +890,39 @@ function initAttendance(toast) {
   };
 
   updateAttendanceDateLabel();
-  dateButton.addEventListener('click', () => {
-    if (typeof datePicker.showPicker === 'function') datePicker.showPicker();
-    else datePicker.click();
-  });
-  datePicker.addEventListener('change', () => {
-    selectedAttendanceDate = parseDateInput(datePicker.value);
-    updateAttendanceDateLabel();
-    renderAttendanceBoard();
-    updateSystemCounts();
-    toast(`Showing attendance for ${$('#attendanceDateLabel').textContent}`);
-  });
+  renderAttendanceCalendar();
+  if (dateButton && calendar) {
+    dateButton.addEventListener('click', event => {
+      event.stopPropagation();
+      calendar.hidden = !calendar.hidden;
+      calendarViewDate = new Date(selectedAttendanceDate.getFullYear(), selectedAttendanceDate.getMonth(), 1);
+      renderAttendanceCalendar();
+    });
+    $('#calendarPrevMonth')?.addEventListener('click', event => {
+      event.stopPropagation();
+      calendarViewDate.setMonth(calendarViewDate.getMonth() - 1);
+      renderAttendanceCalendar();
+    });
+    $('#calendarNextMonth')?.addEventListener('click', event => {
+      event.stopPropagation();
+      calendarViewDate.setMonth(calendarViewDate.getMonth() + 1);
+      renderAttendanceCalendar();
+    });
+    $('#calendarDays')?.addEventListener('click', event => {
+      const button = event.target.closest('[data-date]');
+      if (!button) return;
+      selectedAttendanceDate = parseDateInput(button.dataset.date);
+      calendarViewDate = new Date(selectedAttendanceDate.getFullYear(), selectedAttendanceDate.getMonth(), 1);
+      renderAttendanceCalendar();
+    });
+    $('#calendarApply')?.addEventListener('click', event => {
+      event.stopPropagation();
+      applyAttendanceCalendar(toast);
+    });
+    document.addEventListener('click', event => {
+      if (!calendar.hidden && !event.target.closest('.attendance-date-control')) closeAttendanceCalendar();
+    });
+  }
 
   $('#qrSearchBtn').addEventListener('click', searchByQr);
   searchInput.addEventListener('keydown', event => { if (event.key === 'Enter') searchByQr(); });
@@ -1038,7 +1095,7 @@ function attendanceStateFor(account, date = selectedAttendanceDate) {
 
 /* One record per approved Security guard for the selected date. The time-in/out
    values come from the same localStorage keys written by the mobile QR demo. */
-function collectTodayAttendance(date = selectedAttendanceDate) {
+function collectTodayAttendance(date = new Date()) {
   const records = activeSecurityAccounts().map(account => attendanceStateFor(account, date));
   records.forEach(record => {
     record.missedIn = !record.timeIn && !!record.timeOut;
@@ -1086,11 +1143,12 @@ function renderAttendanceBoard() {
 function renderStaffCarousel(records = collectTodayAttendance()) {
   const track = $('#staffTrack');
   if (!track) return;
-  if (!records.length) {
-    track.innerHTML = '<article class="staff-card empty-staff-card"><h3>No active guard accounts</h3><p>Approved Security accounts will appear here after registration.</p></article>';
+  const onDutyRecords = records.filter(record => !record.absent);
+  if (!onDutyRecords.length) {
+    track.innerHTML = '<article class="staff-card empty-staff-card"><h3>No guards on duty</h3></article>';
     return;
   }
-  track.innerHTML = records.map(record => {
+  track.innerHTML = onDutyRecords.map(record => {
     const statusKey = record.absent ? 'absent' : record.late ? 'late' : 'present';
     const statusText = record.absent ? '● Absent' : record.late ? '● Late arrival' : record.completed ? '● Completed' : '● On duty';
     const initials = record.name.split(/\s+/).map(word => word[0]).slice(0, 2).join('').toUpperCase() || 'SG';
@@ -1320,10 +1378,13 @@ function initProfiles() {
   };
 
   const openAttendanceLogs = () => {
-    const records = collectTodayAttendance();
+    const records = collectTodayAttendance(selectedAttendanceDate);
     const columns = ['Guard name', 'Guard ID', 'Assigned post', 'Time in', 'Time out', 'Status'];
+    $('#hrReportModal').dataset.reportMode = 'dashboard-attendance';
     $('#hrReportPrint').hidden = true;
-    $('#hrReportTitle').textContent = 'Attendance logs';
+    $('#hrAttendanceDateControl').hidden = false;
+    updateAttendanceDateLabel();
+    $('#hrReportTitle').textContent = 'Attendance Logs';
     $('#hrReportDate').textContent = selectedAttendanceDate.toLocaleDateString('en-PH', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     });
@@ -1343,6 +1404,9 @@ function initProfiles() {
     showAccountProfile(button.dataset.userId);
   });
   $('#viewAll').addEventListener('click', openAttendanceLogs);
+  document.addEventListener('attendance-date-applied', () => {
+    if (!$('#hrReportModal').hidden && $('#hrReportModal').dataset.reportMode === 'dashboard-attendance') openAttendanceLogs();
+  });
   $('#closeProfile').addEventListener('click', close);
   closeWhenBackdropIsClicked(modal, close);
 
@@ -1465,6 +1529,7 @@ function initWorkspace(toast, profiles) {
   /* --- active user account storage (approved accounts only) --- */
 
   const renderUserAccounts = () => {
+    if (!userAccountRows || !userAccountCount) return;
     const activeAccounts = getStoredAccounts().filter(account => account.status === 'Active');
     userAccountCount.textContent = activeAccounts.length;
 
@@ -1482,6 +1547,7 @@ function initWorkspace(toast, profiles) {
   };
 
   const renderActiveAccountsPage = (query = '') => {
+    if (!activeAccountsPageBody || !activeAccountsPageCount) return;
     const needle = query.trim().toLowerCase();
     const activeAccounts = getStoredAccounts().filter(account => account.status === 'Active');
     const matches = activeAccounts.filter(account => !needle || accountSearchText(account).includes(needle));
@@ -1508,6 +1574,7 @@ function initWorkspace(toast, profiles) {
   };
 
   const renderManageAccountsPage = (query = '') => {
+    if (!manageAccountsPageBody || !manageAccountsPageCount) return;
     const needle = query.trim().toLowerCase();
     const manageableAccounts = getStoredAccounts().filter(account => ['Active', 'Inactive'].includes(account.status));
     const matches = manageableAccounts.filter(account => !needle || `${accountSearchText(account)} ${account.status}`.toLowerCase().includes(needle));
@@ -1526,37 +1593,39 @@ function initWorkspace(toast, profiles) {
   };
 
   const openActiveAccountsPage = () => {
+    if (!activeAccountsPage || !activeAccountsSearch) return toast('Account directory markup is missing. Please update index.html too.');
     activeAccountsSearch.value = '';
     renderActiveAccountsPage();
     $('#adminPanel').hidden = true;
-    manageAccountsPage.hidden = true;
+    if (manageAccountsPage) manageAccountsPage.hidden = true;
     activeAccountsPage.hidden = false;
     activeAccountsPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const openManageAccountsPage = () => {
+    if (!manageAccountsPage || !manageAccountsSearch) return toast('Manage accounts markup is missing. Please update index.html too.');
     manageAccountsSearch.value = '';
     renderManageAccountsPage();
     $('#adminPanel').hidden = true;
-    activeAccountsPage.hidden = true;
+    if (activeAccountsPage) activeAccountsPage.hidden = true;
     manageAccountsPage.hidden = false;
     manageAccountsPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const showAdminPanel = () => {
-    activeAccountsPage.hidden = true;
-    manageAccountsPage.hidden = true;
+    if (activeAccountsPage) activeAccountsPage.hidden = true;
+    if (manageAccountsPage) manageAccountsPage.hidden = true;
     $('#adminPanel').hidden = false;
     renderPendingAccounts();
     renderUserAccounts();
   };
 
-  openViewAccounts.addEventListener('click', openActiveAccountsPage);
-  openManageAccounts.addEventListener('click', openManageAccountsPage);
-  backToAdminPanel.addEventListener('click', showAdminPanel);
-  backToAdminFromManage.addEventListener('click', showAdminPanel);
-  activeAccountsSearch.addEventListener('input', event => renderActiveAccountsPage(event.target.value));
-  manageAccountsSearch.addEventListener('input', event => renderManageAccountsPage(event.target.value));
+  openViewAccounts?.addEventListener('click', openActiveAccountsPage);
+  openManageAccounts?.addEventListener('click', openManageAccountsPage);
+  backToAdminPanel?.addEventListener('click', showAdminPanel);
+  backToAdminFromManage?.addEventListener('click', showAdminPanel);
+  activeAccountsSearch?.addEventListener('input', event => renderActiveAccountsPage(event.target.value));
+  manageAccountsSearch?.addEventListener('input', event => renderManageAccountsPage(event.target.value));
 
   const readPendingApprovalOptions = row => {
     const rights = $$('[data-access-right]', row)
@@ -1745,8 +1814,8 @@ function initWorkspace(toast, profiles) {
   let currentReport = null;
 
   const openHrReport = mode => {
-    const records = collectTodayAttendance();
     const isAttendance = mode === 'attendance';
+    const records = collectTodayAttendance(isAttendance ? selectedAttendanceDate : new Date());
     const rows = isAttendance
       ? records.filter(record => record.hasScan)
       : records.filter(record => record.exception);
@@ -1754,18 +1823,21 @@ function initWorkspace(toast, profiles) {
       ? ['Guard name', 'Guard ID', 'Time in', 'Time out']
       : ['Guard name', 'Guard ID', 'Time in', 'Time out', 'Issue'];
     currentReport = {
-      title: isAttendance ? 'Attendance logs' : 'Exception reports',
+      title: isAttendance ? 'Attendance Logs' : 'Exception reports',
       columns,
       rows: rows.map(record => isAttendance
         ? [record.name, record.id, record.timeIn || '—', record.timeOut || '—']
         : [record.name, record.id, record.timeIn || '—', record.timeOut || '—', exceptionLabelOf(record)]),
       emptyText: isAttendance
-        ? 'No QR scans recorded today yet.'
+        ? 'No QR scans recorded for this date.'
         : 'No exceptions today — every guard scanned on time.',
     };
+    $('#hrReportModal').dataset.reportMode = isAttendance ? 'hr-attendance' : 'exceptions';
     $('#hrReportPrint').hidden = false;
-    $('#hrReportTitle').textContent = `${currentReport.title} — today`;
-    $('#hrReportDate').textContent = new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    $('#hrAttendanceDateControl').hidden = !isAttendance;
+    if (isAttendance) updateAttendanceDateLabel();
+    $('#hrReportTitle').textContent = currentReport.title;
+    $('#hrReportDate').textContent = (isAttendance ? selectedAttendanceDate : new Date()).toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     $('#hrReportHead').innerHTML = columns.map(col => `<th>${escapeHtml(col).toUpperCase()}</th>`).join('');
     $('#hrReportBody').innerHTML = currentReport.rows.length
       ? currentReport.rows.map(cells => `<tr>${cells.map((cell, index) => index === 0 ? `<td><strong>${escapeHtml(cell)}</strong></td>` : `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')
@@ -1774,6 +1846,9 @@ function initWorkspace(toast, profiles) {
   };
 
   $('#hrAttendanceLogsBtn').addEventListener('click', () => openHrReport('attendance'));
+  document.addEventListener('attendance-date-applied', () => {
+    if (!$('#hrReportModal').hidden && $('#hrReportModal').dataset.reportMode === 'hr-attendance') openHrReport('attendance');
+  });
   $('#hrExceptionReportsBtn').addEventListener('click', () => openHrReport('exceptions'));
   $('#closeHrReport').addEventListener('click', () => { $('#hrReportModal').hidden = true; });
   closeWhenBackdropIsClicked($('#hrReportModal'), () => { $('#hrReportModal').hidden = true; });
@@ -1916,9 +1991,9 @@ function initWorkspace(toast, profiles) {
 
   /* --- approve / reject / activate / deactivate / remove accounts --- */
 
-  pendingAccountRows.addEventListener('click', handleAccountAction);
-  userAccountRows.addEventListener('click', handleAccountAction);
-  manageAccountsPageBody.addEventListener('click', handleAccountAction);
+  pendingAccountRows?.addEventListener('click', handleAccountAction);
+  userAccountRows?.addEventListener('click', handleAccountAction);
+  manageAccountsPageBody?.addEventListener('click', handleAccountAction);
 
   /* --- dialog closing and mock submissions --- */
 

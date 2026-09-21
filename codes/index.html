@@ -737,8 +737,7 @@
           <button class="filter" data-filter="present">On duty <span id="presentFilterCount">3</span></button>
           <button class="filter" data-filter="late">Late <span id="lateFilterCount">1</span></button>
           <button class="filter" data-filter="absent">Absent <span id="absentFilterCount">1</span></button>
-          <button class="date-button" id="attendanceDateButton" type="button">▣ &nbsp; <span id="attendanceDateLabel">Today</span> &nbsp;⌄</button>
-          <input id="attendanceDatePicker" class="date-picker-native" type="date" aria-label="Select attendance date">
+
         </div>
 
         <div class="table-wrap">
@@ -858,7 +857,22 @@
       <h2 id="hrReportTitle"></h2>
       <div class="hr-report-bar">
         <p id="hrReportDate"></p>
-        <button class="hr-report-print" id="hrReportPrint" type="button">Download / Print</button>
+        <div class="hr-report-actions">
+          <div class="attendance-date-control" id="hrAttendanceDateControl">
+            <button class="date-button" id="attendanceDateButton" type="button"><span id="attendanceDateLabel">Sept. 21, 2026</span></button>
+            <div class="calendar-popover" id="attendanceCalendar" hidden>
+              <div class="calendar-popover-head">
+                <button type="button" id="calendarPrevMonth" aria-label="Previous month">‹</button>
+                <strong id="calendarMonthLabel">September 2026</strong>
+                <button type="button" id="calendarNextMonth" aria-label="Next month">›</button>
+              </div>
+              <div class="calendar-weekdays"><span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span></div>
+              <div class="calendar-days" id="calendarDays"></div>
+              <button class="calendar-apply" id="calendarApply" type="button">Apply</button>
+            </div>
+          </div>
+          <button class="hr-report-print" id="hrReportPrint" type="button">Download / Print</button>
+        </div>
       </div>
       <div class="hr-report-table-wrap">
         <table class="hr-report-table">
@@ -890,5 +904,5 @@
   <div class="toast" id="toast">QR scanner is ready to launch</div>
 
   <script src="script.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3e971132c93fcfa',t:'MTc4OTk5NzYwNg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3e9e2f57a0f02ae',t:'MTc5MDAwMjI3MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
