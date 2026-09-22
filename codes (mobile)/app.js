@@ -69,7 +69,7 @@ function displayNameOf(account) {
 }
 
 function todayKey(date = new Date()) {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function todayStoreKey() {
@@ -135,7 +135,7 @@ function readAllAttendanceLogs() {
 function parseLogKey(key) {
   const [year, month, day] = String(key).split('-').map(Number);
   if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
-  return new Date(year, month, day);
+  return new Date(year, month - 1, day);
 }
 
 function sameDayKey(date = new Date()) {

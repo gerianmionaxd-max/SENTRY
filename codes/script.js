@@ -1058,7 +1058,7 @@ const LATE_GRACE_MINUTES = 30;
 
 /* Same day-key format the mobile app stamps its QR states with */
 function todayKeyLocal(date = new Date()) {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function timeLabelOf(date) {
