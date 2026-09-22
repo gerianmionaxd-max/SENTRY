@@ -428,6 +428,9 @@ app.put('/api/payroll-runs/sync', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+/* Static assets live outside /codes, so both the Node server and Live Server
+   can resolve the existing ../images/... paths used by the HTML. */
+app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/mobile', express.static(MOBILE_DIR));
 app.use(express.static(CODES_DIR));
 app.get('/mobile', (_req, res) => res.sendFile(path.join(MOBILE_DIR, 'index.html')));
