@@ -104,6 +104,7 @@ function rememberAttendanceLog() {
     savedAt: new Date().toISOString(),
   };
   localStorage.setItem(ATTENDANCE_LOGS_KEY, JSON.stringify(logs));
+  try { window.SentryDB?.syncAttendance?.(logs); } catch (error) { console.warn('[SENTRY] attendance sync skipped', error); }
 }
 
 function formatTime(date) {
@@ -805,7 +806,8 @@ function initClock() {
   setInterval(update, 10 * 1000);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await window.SentryDB?.hydrate?.();
   initClock();
   initAuth();
   initNavigation();

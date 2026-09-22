@@ -350,6 +350,7 @@ function getStoredAccounts() {
 function saveStoredAccounts(accounts) {
   localStorage.setItem(USER_ACCOUNTS_KEY, JSON.stringify(accounts));
   localStorage.removeItem(LEGACY_PENDING_ACCOUNTS_KEY);
+  syncDatabase('syncEmployees', accounts);
 }
 
 /* Guard IDs look like SG-2026-0242: "SG", the registration year and a
@@ -361,6 +362,18 @@ const ATTENDANCE_LOGS_KEY = 'sentryAttendanceLogs';
 const PAYROLL_SALARY_KEY = 'sentryGuardSalaryProfiles';
 const PAYROLL_RUNS_KEY = 'sentryPayrollRuns';
 const PAYROLL_ADJUSTMENTS_KEY = 'sentryPayrollAdjustments';
+
+/* MySQL is the durable store. These calls deliberately do not block the
+   existing UI render path: the dashboard still works offline and the API
+   client reports a sync failure without losing the local change. */
+function syncDatabase(method, value) {
+  try {
+    const bridge = window.SentryDB;
+    if (bridge && typeof bridge[method] === 'function') bridge[method](value);
+  } catch (error) {
+    console.warn('[SENTRY] database sync skipped', error);
+  }
+}
 
 function usedGuardNumbers(extraAccounts = []) {
   const used = new Set();
@@ -1081,6 +1094,7 @@ function readAttendanceLogs() {
 
 function saveAttendanceLogs(logs) {
   localStorage.setItem(ATTENDANCE_LOGS_KEY, JSON.stringify(logs));
+  syncDatabase('syncAttendance', logs);
 }
 
 function rememberAttendanceLog(account, state) {
@@ -1162,6 +1176,7 @@ function readSalaryProfiles() {
 
 function saveSalaryProfiles(profiles) {
   localStorage.setItem(PAYROLL_SALARY_KEY, JSON.stringify(profiles));
+  syncDatabase('syncSalaryProfiles', profiles);
 }
 
 function salaryProfileFor(account) {
@@ -1232,6 +1247,7 @@ function readPayrollAdjustments() {
 
 function savePayrollAdjustments(adjustments) {
   localStorage.setItem(PAYROLL_ADJUSTMENTS_KEY, JSON.stringify(adjustments));
+  syncDatabase('syncAdjustments', adjustments);
 }
 
 function payrollAdjustmentEffect(account, profile, start, end) {
@@ -2090,6 +2106,7 @@ function initWorkspace(toast, profiles) {
         : `${displayNameOf(account)}'s account was deactivated`;
     }
     if (action === 'remove') {
+      syncDatabase('deleteEmployee', account.userId);
       const index = accounts.indexOf(account);
       if (index !== -1) accounts.splice(index, 1);
       [MOBILE_TODAY_KEY_PREFIX, MOBILE_POSTS_KEY_PREFIX].forEach(prefix => {
@@ -2102,6 +2119,8 @@ function initWorkspace(toast, profiles) {
         const salaries = readSalaryProfiles();
         delete salaries[account.userId];
         saveSalaryProfiles(salaries);
+        const adjustments = readPayrollAdjustments().filter(item => item.userId !== account.userId);
+        savePayrollAdjustments(adjustments);
         const photos = JSON.parse(localStorage.getItem('sentryGuardProfilePhotos') || '{}');
         delete photos[account.userId];
         localStorage.setItem('sentryGuardProfilePhotos', JSON.stringify(photos));
@@ -3043,6 +3062,7 @@ function initWorkspace(toast, profiles) {
       const runs = readStoredList(PAYROLL_RUNS_KEY);
       runs.unshift({ id: `PAY-${Date.now()}`, period: summary.period.label, estimated: summary.estimated, createdAt: new Date().toISOString(), rows: summary.rows.map(row => ({ userId: row.account.userId, netPay: row.netPay })) });
       localStorage.setItem(PAYROLL_RUNS_KEY, JSON.stringify(runs));
+      syncDatabase('syncPayrollRuns', runs);
       updatePayrollDashboard();
       toast('Payroll run finalized and saved.');
     }
@@ -3166,7 +3186,8 @@ function initLogoutButton() {
   });
 }
 
-function initDashboard() {
+async function initDashboard() {
+  await window.SentryDB?.hydrate?.();
   migrateStoredAccounts();
   const toast = createToast($('#toast'));
 

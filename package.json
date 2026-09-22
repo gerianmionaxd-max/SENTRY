@@ -1,0 +1,17 @@
+{
+  "name": "sentry-attendance-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SENTRY attendance, employee and payroll dashboard with MySQL persistence",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check \"codes/script.js\" && node --check \"codes (mobile)/app.js\" && node --check \"codes/api-client.js\""
+  },
+  "dependencies": {
+    "dotenv": "^18.0.2",
+    "express": "^5.1.0",
+    "mysql2": "^3.14.3"
+  }
+}
