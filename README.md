@@ -19,7 +19,13 @@ The schema includes foreign keys, unique employee/date constraints, and the colu
 
 `attendance_logs.time_in` / `time_out` (and their copies in `validated_attendance_data`) are stored as **local wall-clock time** — the time shown on the guard's clock at the post (the Philippines, UTC+8) — not UTC. The clients stamp attendance with timezone-free local strings and the API stores them verbatim, so what you read in MySQL is exactly what the guard punched.
 
-If your database was populated before this convention, run `db/migrate_timein_time_out_to_local_time.sql` once to shift the existing UTC rows into local time (it is guarded by a `schema_migrations` marker, so running it twice is safe).
+If your database was populated before this convention, run the migration once to shift the existing UTC rows into local time (it is guarded by a `schema_migrations` marker, so running it twice is safe):
+
+```bash
+npm run migrate:times            # no mysql CLI needed - uses the .env credentials
+# or, if you have the mysql CLI:
+mysql -u root -p sentry_attendance < db/migrate_timein_time_out_to_local_time.sql
+```
 
 ## Run locally
 

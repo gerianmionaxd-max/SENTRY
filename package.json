@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check \"codes/script.js\" && node --check \"codes (mobile)/app.js\" && node --check \"codes/api-client.js\""
+    "migrate:times": "node db/migrate-timein-timeout.js",
+    "check": "node --check server.js && node --check \"codes/script.js\" && node --check \"codes (mobile)/app.js\" && node --check \"codes/api-client.js\" && node --check db/migrate-timein-timeout.js"
   },
   "dependencies": {
     "dotenv": "^18.0.2",
