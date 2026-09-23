@@ -101,7 +101,7 @@ function rememberAttendanceLog() {
     token: todayState.token || '',
     post: guard.post || '',
     assignment: guard.assignment || '',
-    savedAt: new Date().toISOString(),
+    savedAt: localStamp(),
   };
   localStorage.setItem(ATTENDANCE_LOGS_KEY, JSON.stringify(logs));
   try { window.SentryDB?.syncAttendance?.(logs); } catch (error) { console.warn('[SENTRY] attendance sync skipped', error); }
@@ -117,6 +117,14 @@ function formatTime(date) {
 
 function formatDay(date) {
   return date.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+/* Wall-clock stamp exactly as shown on the guard's phone (no timezone
+   designator), e.g. "2026-09-23T08:05:07". The API stores it verbatim so the
+   database holds the time the guard actually punched, not a UTC offset. */
+function localStamp(date = new Date()) {
+  const pad = number => String(number).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
 function minsToLabel(totalMinutes) {
@@ -722,7 +730,7 @@ function initScannerDemo() {
     todayState = readToday();
 
     if (!todayState.in) {
-      todayState.in = now.toISOString();
+      todayState.in = localStamp(now);
       todayState.token = qrToken;
       const late = minutesOf(todayState.in) > SHIFT_START_MINUTES;
       saveToday();
@@ -732,7 +740,7 @@ function initScannerDemo() {
       setScannedUI(true, `${late ? 'Late time-in' : 'Time-in'} recorded · ${formatTime(now)}`);
       toast(late ? 'Late time-in recorded by personnel.' : 'Time-in recorded by personnel.');
     } else if (!todayState.out) {
-      todayState.out = now.toISOString();
+      todayState.out = localStamp(now);
       todayState.token = qrToken;
       saveToday();
       renderHome();
