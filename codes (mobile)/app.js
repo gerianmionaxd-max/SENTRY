@@ -68,8 +68,52 @@ function displayNameOf(account) {
   return account.username || account.email;
 }
 
+/* ISO day key (YYYY-MM-DD, month 1-12). The older build wrote "YYYY-M-D"
+   with a 0-based month ("2026-8-23" for Sep 23); the API rejects that shape,
+   so attendance stamped with it was silently dropped from the database. */
 function todayKey(date = new Date()) {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/* The older build's legacy day keys are never zero-padded, while ISO keys are
+   always "YYYY-MM-DD", so a legacy key ("2026-8-23") remaps unambiguously to
+   its ISO form ("2026-09-23"). ISO-shaped keys pass through unchanged. */
+function normalizeLegacyDayKey(key) {
+  const match = String(key || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const bothPadded = match[2].length > 1 && match[3].length > 1;
+  const isRealDate = month >= 1 && month <= 12 && day >= 1 && day <= new Date(year, month, 0).getDate();
+  // A zero-padded key that is a real date is already ISO. (A padded key that
+  // is not a real date, e.g. "2026-11-31", must be a legacy 0-based key.)
+  if (bothPadded && isRealDate) return key;
+  const fixedMonth = month + 1; // legacy months were 0-based
+  if (fixedMonth < 1 || fixedMonth > 12 || day < 1) return key; // not plausible: leave alone
+  return `${year}-${String(fixedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/* Remap every legacy day key in the attendance log store and persist the
+   result once. Safe to run on every load: ISO keys are untouched. */
+function normalizeLegacyLogKeys(logs) {
+  let changed = false;
+  const next = {};
+  for (const [key, byGuard] of Object.entries(logs || {})) {
+    const fixedKey = normalizeLegacyDayKey(key);
+    if (!fixedKey || fixedKey === key || !byGuard || typeof byGuard !== 'object') {
+      // Merge (not overwrite) so a remapped legacy entry and an existing ISO
+      // entry for the same day keep all guards.
+      next[key] = { ...(next[key] || {}), ...byGuard };
+      continue;
+    }
+    next[fixedKey] = { ...(next[fixedKey] || {}), ...byGuard };
+    changed = true;
+  }
+  if (changed) {
+    try { localStorage.setItem(ATTENDANCE_LOGS_KEY, JSON.stringify(next)); } catch { /* private browsing */ }
+  }
+  return next;
 }
 
 function todayStoreKey() {
@@ -80,6 +124,15 @@ function readToday() {
   try {
     const saved = JSON.parse(localStorage.getItem(todayStoreKey()) || 'null');
     if (saved && saved.key === todayKey()) return saved;
+    // Repair a today-state saved under the older build's legacy key format so
+    // an in-progress shift (time-in/time-out) survives the upgrade instead of
+    // being silently reset.
+    const fixedKey = saved ? normalizeLegacyDayKey(saved.key) : null;
+    if (saved && fixedKey === todayKey()) {
+      const repaired = { ...saved, key: fixedKey };
+      localStorage.setItem(todayStoreKey(), JSON.stringify(repaired));
+      return repaired;
+    }
   } catch { /* corrupted entry: start fresh */ }
   return { key: todayKey(), in: null, out: null };
 }
@@ -91,9 +144,7 @@ function saveToday() {
 
 function rememberAttendanceLog() {
   if (!guard || !todayState || (!todayState.in && !todayState.out)) return;
-  let logs = {};
-  try { logs = JSON.parse(localStorage.getItem(ATTENDANCE_LOGS_KEY) || '{}'); }
-  catch { logs = {}; }
+  const logs = readAllAttendanceLogs();
   logs[todayState.key] = logs[todayState.key] || {};
   logs[todayState.key][guard.userId] = {
     in: todayState.in,
@@ -136,14 +187,14 @@ function minsToLabel(totalMinutes) {
 function readAllAttendanceLogs() {
   try {
     const parsed = JSON.parse(localStorage.getItem(ATTENDANCE_LOGS_KEY) || '{}');
-    return parsed && typeof parsed === 'object' ? parsed : {};
+    return normalizeLegacyLogKeys(parsed && typeof parsed === 'object' ? parsed : {});
   } catch { return {}; }
 }
 
 function parseLogKey(key) {
   const [year, month, day] = String(key).split('-').map(Number);
   if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
-  return new Date(year, month, day);
+  return new Date(year, month - 1, day);
 }
 
 function sameDayKey(date = new Date()) {
