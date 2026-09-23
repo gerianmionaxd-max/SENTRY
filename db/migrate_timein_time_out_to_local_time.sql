@@ -7,11 +7,13 @@
 -- The code now stores local wall-clock time verbatim; this migration brings
 -- the existing rows in line.
 --
--- Deploy the updated code first, then run this ONCE as a MySQL administrator:
+-- Deploy the updated code first, then run this file ONCE as a MySQL
+-- administrator:
 --
 --   mysql -u root -p sentry_attendance < db/migrate_timein_time_out_to_local_time.sql
 --
--- A schema_migrations marker table makes re-running this file a no-op.
+-- The procedure below only applies the shift when the schema_migrations
+-- marker is absent, so re-running this file is safe (it becomes a no-op).
 -- If your posts are not in Asia/Manila, change "INTERVAL 8 HOUR" below to
 -- your post's UTC offset BEFORE running.
 
@@ -23,9 +25,16 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   PRIMARY KEY (migration)
 ) ENGINE=InnoDB;
 
+-- State before running (0 = not applied yet, 1 = already applied):
+SELECT IF(COUNT(*) = 0, 'NOT APPLIED - will migrate now', 'ALREADY APPLIED - nothing to do') AS migration_status
+  FROM schema_migrations
+ WHERE migration = 'timein_time_out_utc_to_pht';
+
+DROP PROCEDURE IF EXISTS sentry_fix_attendance_local_time;
+
 DELIMITER $$
 
-CREATE PROCEDURE IF NOT EXISTS sentry_fix_attendance_local_time()
+CREATE PROCEDURE sentry_fix_attendance_local_time()
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM schema_migrations WHERE migration = 'timein_time_out_utc_to_pht'
@@ -48,8 +57,8 @@ END$$
 DELIMITER ;
 
 CALL sentry_fix_attendance_local_time();
-DROP PROCEDURE IF EXISTS sentry_fix_attendance_local_time;
+DROP PROCEDURE sentry_fix_attendance_local_time;
 
-SELECT 'time-in/out corrected to local time (UTC+8)' AS result,
-       (SELECT COUNT(*) FROM schema_migrations
+-- State after running (should be 1):
+SELECT (SELECT COUNT(*) FROM schema_migrations
          WHERE migration = 'timein_time_out_utc_to_pht') AS applied;
