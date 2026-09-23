@@ -57,7 +57,6 @@ function employeeFromRow(row) {
   }
   return {
     userId: row.user_id,
-    username: row.username || '',
     firstName: row.first_name,
     middleName: row.middle_name || '',
     lastName: row.last_name,
@@ -89,7 +88,6 @@ function employeeFromRow(row) {
 function employeeParams(item) {
   return [
     item.userId,
-    item.username || null,
     item.firstName || '',
     item.middleName || null,
     item.lastName || '',
@@ -117,16 +115,16 @@ function employeeParams(item) {
 }
 
 const EMPLOYEE_COLUMNS = `
-  user_id, username, first_name, middle_name, last_name, gender, phone,
+  user_id, first_name, middle_name, last_name, gender, phone,
   birthday, birth_date, country, region, city, barangay, district, street,
   postal, department, email, password, status, access_rights, expiration_date,
   post, assignment, requested_at
 `;
 const EMPLOYEE_VALUES = `
-  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 `;
 const EMPLOYEE_UPDATE = `
-  username=VALUES(username), first_name=VALUES(first_name), middle_name=VALUES(middle_name),
+ first_name=VALUES(first_name), middle_name=VALUES(middle_name),
   last_name=VALUES(last_name), gender=VALUES(gender), phone=VALUES(phone), birthday=VALUES(birthday),
   birth_date=VALUES(birth_date), country=VALUES(country), region=VALUES(region), city=VALUES(city),
   barangay=VALUES(barangay), district=VALUES(district), street=VALUES(street), postal=VALUES(postal),

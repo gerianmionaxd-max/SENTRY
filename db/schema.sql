@@ -10,7 +10,6 @@ USE sentry_attendance;
 
 CREATE TABLE IF NOT EXISTS employees (
   user_id VARCHAR(32) NOT NULL,
-  username VARCHAR(120) NULL,
   first_name VARCHAR(80) NOT NULL,
   middle_name VARCHAR(80) NULL,
   last_name VARCHAR(80) NOT NULL,
