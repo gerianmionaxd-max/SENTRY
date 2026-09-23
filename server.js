@@ -271,14 +271,21 @@ async function replacePayrollRuns(items) {
 
 async function upsertAttendance(logs) {
   const connection = await pool.getConnection();
+  const skippedEmployeeIds = [];
   try {
     await connection.beginTransaction();
+    const [employeeRows] = await connection.execute('SELECT user_id FROM employees');
+    const employeeIds = new Set(employeeRows.map(row => row.user_id));
     for (const [dateKey, byEmployee] of Object.entries(logs || {})) {
       if (!byEmployee || typeof byEmployee !== 'object') continue;
       const attendanceDate = asDate(dateKey);
       if (!attendanceDate) continue;
       for (const [employeeId, item] of Object.entries(byEmployee)) {
         if (!item || !employeeId) continue;
+        if (!employeeIds.has(employeeId)) {
+          if (!skippedEmployeeIds.includes(employeeId)) skippedEmployeeIds.push(employeeId);
+          continue;
+        }
         const timeIn = asDateTime(item.in);
         const timeOut = asDateTime(item.out);
         const savedAt = asDateTime(item.savedAt) || localNow();
@@ -317,6 +324,10 @@ async function upsertAttendance(logs) {
       }
     }
     await connection.commit();
+    if (skippedEmployeeIds.length) {
+      console.warn('[SENTRY API] Skipped attendance for unknown employees:', skippedEmployeeIds.join(', '));
+    }
+    return { skippedEmployeeIds };
   } catch (error) {
     await connection.rollback();
     throw error;
@@ -389,8 +400,8 @@ app.delete('/api/employees/:id', async (req, res, next) => {
 
 app.put('/api/attendance/sync', async (req, res, next) => {
   try {
-    await upsertAttendance(req.body || {});
-    res.json({ ok: true });
+    const result = await upsertAttendance(req.body || {});
+    res.json({ ok: true, ...result });
   } catch (error) { next(error); }
 });
 
