@@ -15,6 +15,12 @@ The dashboard and mobile QR app now use a small Node/Express API backed by MySQL
 
 The schema includes foreign keys, unique employee/date constraints, and the columns used by the existing desktop and mobile code.
 
+## Time convention (time-in / time-out)
+
+`attendance_logs.time_in` / `time_out` (and their copies in `validated_attendance_data`) are stored as **local wall-clock time** — the time shown on the guard's clock at the post (the Philippines, UTC+8) — not UTC. The clients stamp attendance with timezone-free local strings and the API stores them verbatim, so what you read in MySQL is exactly what the guard punched.
+
+If your database was populated before this convention, run `db/migrate_timein_time_out_to_local_time.sql` once to shift the existing UTC rows into local time (it is guarded by a `schema_migrations` marker, so running it twice is safe).
+
 ## Run locally
 
 Requirements: Node.js 18+, npm, and MySQL 8+ or MariaDB 10.5+.

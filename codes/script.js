@@ -741,7 +741,7 @@ function initAuthentication() {
       return;
     }
 
-    const requestedAt = new Date().toISOString();
+    const requestedAt = localStamp();
     if (existingAccount) {
       Object.assign(existingAccount, details, { status: 'Pending', requestedAt });
     } else {
@@ -1061,6 +1061,14 @@ function todayKeyLocal(date = new Date()) {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
+/* Wall-clock stamp without a timezone designator (e.g. "2026-09-23T08:05:07").
+   The API stores these verbatim, so the database holds the local time at the
+   machine that recorded the event instead of a UTC offset. */
+function localStamp(date = new Date()) {
+  const pad = number => String(number).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
 function timeLabelOf(date) {
   let hours = date.getHours();
   const suffix = hours >= 12 ? 'PM' : 'AM';
@@ -1107,7 +1115,7 @@ function rememberAttendanceLog(account, state) {
     token: state.token || '',
     post: account.post || '',
     assignment: account.assignment || '',
-    savedAt: new Date().toISOString(),
+    savedAt: localStamp(),
   };
   saveAttendanceLogs(logs);
 }

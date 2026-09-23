@@ -31,9 +31,21 @@ const asDate = value => {
 };
 const asDateTime = value => {
   if (!value) return null;
+  const text = String(value).trim();
+  // Plain wall-clock stamps ("YYYY-MM-DDTHH:MM:SS" or "YYYY-MM-DD HH:MM:SS", no
+  // timezone designator) are stored verbatim — the client already stamped the
+  // local time at the guard's post, so the database shows what the guard saw.
+  // Zoned values (legacy toISOString output) keep the previous UTC conversion.
+  const localMatch = text.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})$/);
+  if (localMatch) return `${localMatch[1]} ${localMatch[2]}`;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return date.toISOString().slice(0, 19).replace('T', ' ');
+};
+const localNow = () => {
+  const now = new Date();
+  const pad = number => String(number).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 };
 const asNumber = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 const jsonValue = value => typeof value === 'string' ? value : JSON.stringify(value ?? []);
@@ -223,7 +235,7 @@ async function replaceAdjustments(items) {
          ON DUPLICATE KEY UPDATE employee_id=VALUES(employee_id), adjustment_type=VALUES(adjustment_type),
            amount=VALUES(amount), unit=VALUES(unit), note=VALUES(note), adjustment_date=VALUES(adjustment_date)`,
         [item.id, item.userId, item.type, asNumber(item.amount), item.unit || null, item.note || null,
-          asDate(item.date) || new Date().toISOString().slice(0, 10), asDateTime(item.createdAt) || new Date()],
+          asDate(item.date) || new Date().toISOString().slice(0, 10), asDateTime(item.createdAt) || localNow()],
       );
     }
     await connection.commit();
@@ -247,7 +259,7 @@ async function replacePayrollRuns(items) {
          VALUES (?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE period_label=VALUES(period_label), estimated=VALUES(estimated),
            created_at=VALUES(created_at), rows_json=VALUES(rows_json)`,
-        [item.id, item.period || '', asNumber(item.estimated), asDateTime(item.createdAt) || new Date(), jsonValue(item.rows || [])],
+        [item.id, item.period || '', asNumber(item.estimated), asDateTime(item.createdAt) || localNow(), jsonValue(item.rows || [])],
       );
     }
     await connection.commit();
@@ -271,7 +283,7 @@ async function upsertAttendance(logs) {
         if (!item || !employeeId) continue;
         const timeIn = asDateTime(item.in);
         const timeOut = asDateTime(item.out);
-        const savedAt = asDateTime(item.savedAt) || new Date();
+        const savedAt = asDateTime(item.savedAt) || localNow();
         await connection.execute(
           `INSERT INTO attendance_logs
             (employee_id, attendance_date, time_in, time_out, token, post, assignment, saved_at)
@@ -285,7 +297,9 @@ async function upsertAttendance(logs) {
           [employeeId, attendanceDate],
         );
         if (!rows.length) continue;
-        const late = timeIn ? new Date(timeIn.replace(' ', 'T')).toISOString().slice(11, 19) > '07:05:00' : 0;
+        // timeIn is a local wall-clock string ("YYYY-MM-DD HH:MM:SS"), so compare
+        // the HH:MM text directly — no Date round-trip, no server-TZ drift.
+        const late = timeIn ? timeIn.slice(11, 16) > '07:05' : 0;
         const absent = !timeIn && !timeOut;
         const missedIn = !timeIn && !!timeOut;
         const missedOut = !!timeIn && !timeOut;
