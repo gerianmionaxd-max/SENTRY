@@ -1056,9 +1056,52 @@ function formatPhone(phone) {
 const SHIFT_START_MINUTES = 7 * 60;
 const LATE_GRACE_MINUTES = 30;
 
-/* Same day-key format the mobile app stamps its QR states with */
+/* Same ISO day-key format (YYYY-MM-DD, month 1-12) the mobile app stamps its
+   QR states with. The older build used a 0-based, unpadded month, which the
+   API rejected — punches stamped with it never reached the database. */
 function todayKeyLocal(date = new Date()) {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/* The older build's legacy day keys are never zero-padded, while ISO keys are
+   always "YYYY-MM-DD", so a legacy key ("2026-8-23") remaps unambiguously to
+   its ISO form ("2026-09-23"). ISO-shaped keys pass through unchanged. */
+function normalizeLegacyDayKey(key) {
+  const match = String(key || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const bothPadded = match[2].length > 1 && match[3].length > 1;
+  const isRealDate = month >= 1 && month <= 12 && day >= 1 && day <= new Date(year, month, 0).getDate();
+  // A zero-padded key that is a real date is already ISO. (A padded key that
+  // is not a real date, e.g. "2026-11-31", must be a legacy 0-based key.)
+  if (bothPadded && isRealDate) return key;
+  const fixedMonth = month + 1; // legacy months were 0-based
+  if (fixedMonth < 1 || fixedMonth > 12 || day < 1) return key; // not plausible: leave alone
+  return `${year}-${String(fixedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/* Remap every legacy day key in the attendance log store and persist the
+   result once. Safe to run on every load: ISO keys are untouched. */
+function normalizeLegacyLogKeys(logs) {
+  let changed = false;
+  const next = {};
+  for (const [key, byGuard] of Object.entries(logs || {})) {
+    const fixedKey = normalizeLegacyDayKey(key);
+    if (!fixedKey || fixedKey === key || !byGuard || typeof byGuard !== 'object') {
+      // Merge (not overwrite) so a remapped legacy entry and an existing ISO
+      // entry for the same day keep all guards.
+      next[key] = { ...(next[key] || {}), ...byGuard };
+      continue;
+    }
+    next[fixedKey] = { ...(next[fixedKey] || {}), ...byGuard };
+    changed = true;
+  }
+  if (changed) {
+    try { localStorage.setItem(ATTENDANCE_LOGS_KEY, JSON.stringify(next)); } catch { /* private browsing */ }
+  }
+  return next;
 }
 
 /* Wall-clock stamp without a timezone designator (e.g. "2026-09-23T08:05:07").
@@ -1096,7 +1139,10 @@ function simpleHash(text) {
 }
 
 function readAttendanceLogs() {
-  try { return JSON.parse(localStorage.getItem(ATTENDANCE_LOGS_KEY) || '{}'); }
+  try {
+    const parsed = JSON.parse(localStorage.getItem(ATTENDANCE_LOGS_KEY) || '{}');
+    return normalizeLegacyLogKeys(parsed && typeof parsed === 'object' ? parsed : {});
+  }
   catch { return {}; }
 }
 
@@ -1132,7 +1178,16 @@ function attendanceStateFor(account, date = selectedAttendanceDate) {
   try {
     liveState = JSON.parse(localStorage.getItem(MOBILE_TODAY_KEY_PREFIX + account.userId) || 'null');
   } catch { liveState = null; }
-  if (liveState?.key) rememberAttendanceLog(account, liveState);
+  if (liveState?.key) {
+    // Remap a live state still stored under the older build's legacy key
+    // format (and persist the repair) so it lands under today's ISO key.
+    const fixedKey = normalizeLegacyDayKey(liveState.key);
+    if (fixedKey && fixedKey !== liveState.key) {
+      liveState = { ...liveState, key: fixedKey };
+      try { localStorage.setItem(MOBILE_TODAY_KEY_PREFIX + account.userId, JSON.stringify(liveState)); } catch { /* ignore */ }
+    }
+    if (liveState.key) rememberAttendanceLog(account, liveState);
+  }
 
   const sameAsLive = liveState && liveState.key === key;
   const state = sameAsLive ? liveState : storedAttendanceStateFor(account, key);

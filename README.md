@@ -40,6 +40,18 @@ Open:
 - Mobile attendance app: `http://localhost:3000/mobile/`
 - Database health check: `http://localhost:3000/api/health`
 
+### On Windows (PowerShell)
+
+PowerShell does not support the `<` redirection or `cp` from the commands above. Use:
+
+```powershell
+Get-Content db\schema.sql | mysql -u root -p
+mysql -u root -p -e "CREATE USER IF NOT EXISTS 'sentry_app'@'localhost' IDENTIFIED BY 'change-this-password'; CREATE USER IF NOT EXISTS 'sentry_app'@'127.0.0.1' IDENTIFIED BY 'change-this-password'; GRANT ALL PRIVILEGES ON sentry_attendance.* TO 'sentry_app'@'localhost'; GRANT ALL PRIVILEGES ON sentry_attendance.* TO 'sentry_app'@'127.0.0.1'; FLUSH PRIVILEGES;"
+copy .env.example .env
+```
+
+Then edit `.env` with the same MySQL credentials and run `npm start`. (If you use phpMyAdmin, you can also import `db/schema.sql` from the *Import* tab instead of the first command.)
+
 The API is same-origin with both pages, so browser code never connects directly to MySQL. The server is the only component that holds database credentials.
 
 ## CRUD/API endpoints
